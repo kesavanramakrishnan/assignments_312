@@ -9,7 +9,7 @@
 Fitting a power law to the fitted optima gives the proposed scaling rule
 
 $$
-\eta^*(D) = 0.00328\left(\frac{D}{614.4\text{M}}\right)^{0.21}
+\eta^*(D) = 0.00328\left(\frac{D}{614.4\text{M}}\right)^{0.213}
 $$
 
 From what we see, the optimal LR rises with token count.
