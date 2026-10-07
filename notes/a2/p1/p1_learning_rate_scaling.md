@@ -8,11 +8,21 @@
 
 Fitting a power law to the fitted optima gives the proposed scaling rule
 
-$$\eta^*(D) = 0.00328\left(\frac{D}{614.4\text{M}}\right)^{0.21}$$
+$$
+\eta^*(D) = 0.00328\left(\frac{D}{614.4\text{M}}\right)^{0.21}
+$$
 
-The optimal LR rises with token count.
+From what we see, the optimal LR rises with token count.
 
 ## (b) Predict before increasing the budget
+
+Predicted optimal LRs from the power law in (a), recorded before inspecting the P1(b) measurements:
+
+| Tokens | Predicted $\eta^*$ |
+| --- | --- |
+| 1.2288B | 0.00380 |
+| 1.8432B | 0.00414 |
+| 2.4576B | 0.00440 |
 
 ## (c) Compare and test two scaling rules
 
@@ -21,3 +31,4 @@ The optimal LR rises with token count.
 ## (e) Explore schedule variants (optional)
 
 ## Synthesis
+
