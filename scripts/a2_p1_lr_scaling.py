@@ -171,6 +171,15 @@ def main():
     ax.minorticks_off()
     save(fig, "p1a_lr_loss_curves.png")
 
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    plot_optima(ax, adamw, "C0", adamw.tokens.max() * 1.2, show_predictions=False)
+    ax.set_xticks(adamw.tokens, [f"{t / 1e6:g}M" for t in adamw.tokens])
+    ax.set_yticks([.0024, .0027, .003, .0033], ["0.0024", "0.0027", "0.0030", "0.0033"])
+    ax.minorticks_off()
+    ax.set_title("AdamW: fitted optimal LR vs token budget")
+    ax.legend()
+    save(fig, "p1a_optimal_lr_scaling.png")
+
     fig, (left, right) = plt.subplots(1, 2, figsize=(12, 4.8))
     plot_curves(left, adamw)
     plot_optima(right, adamw, "C0", max(ADAMW_PREDICTION_TOKENS) * 1.2)
