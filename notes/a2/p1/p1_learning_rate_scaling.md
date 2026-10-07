@@ -2,6 +2,8 @@
 
 ## (a) Learn from small training budgets
 
+![AdamW final validation loss vs peak LR at each token budget](p1a_lr_loss_curves.png)
+
 ## (b) Predict before increasing the budget
 
 ## (c) Compare and test two scaling rules

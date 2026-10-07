@@ -164,6 +164,13 @@ def main():
     report(adamw)
     report(hyperball)
 
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    plot_curves(ax, adamw)
+    lrs = sorted({lr for points in adamw.budgets.values() for lr in points[:, 0]})
+    ax.set_xticks(lrs, [f"{lr:g}" for lr in lrs])
+    ax.minorticks_off()
+    save(fig, "p1a_lr_loss_curves.png")
+
     fig, (left, right) = plt.subplots(1, 2, figsize=(12, 4.8))
     plot_curves(left, adamw)
     plot_optima(right, adamw, "C0", max(ADAMW_PREDICTION_TOKENS) * 1.2)
