@@ -36,6 +36,12 @@ The trend from the small budgets does not continue. The prediction holds at 1.22
 
 ## (d) Hyperball versus AdamW
 
+![Hyperball final validation loss vs peak LR at each token budget](p1d_lr_loss_curves.png)
+
+![Hyperball vs AdamW fitted optimal LR vs token budget](p1d_optimal_lr_scaling.png)
+
+Predicted optimal LR at 1.2288B from the Hyperball power law, recorded before running the target: 0.0114.
+
 ## (e) Explore schedule variants (optional)
 
 ## Synthesis

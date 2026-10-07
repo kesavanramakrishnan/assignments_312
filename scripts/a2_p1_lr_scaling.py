@@ -285,14 +285,22 @@ def main():
     ax.legend(fontsize=9)
     save(fig, "p1c_two_rules.png")
 
-    fig, (left, right) = plt.subplots(1, 2, figsize=(12, 4.8))
-    plot_curves(left, hyperball)
-    plot_optima(right, hyperball, hyperball_law, "C3", max(HYPERBALL_PREDICTION_TOKENS) * 1.2)
-    plot_optima(right, adamw, adamw_law, "C0", max(HYPERBALL_PREDICTION_TOKENS) * 1.2,
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    plot_curves(ax, hyperball)
+    label_measured_lrs(ax, hyperball)
+    save(fig, "p1d_lr_loss_curves.png")
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    plot_optima(ax, hyperball, hyperball_law, "C3", max(HYPERBALL_PREDICTION_TOKENS) * 1.2)
+    plot_optima(ax, adamw, adamw_law, "C0", max(HYPERBALL_PREDICTION_TOKENS) * 1.2,
                 show_predictions=False)
-    right.set_title("Optimal LR vs token budget")
-    right.legend(fontsize=8)
-    save(fig, "p1d_hyperball_vs_adamw.png")
+    label_token_budgets(ax, np.concatenate([adamw.tokens, HYPERBALL_PREDICTION_TOKENS]))
+    ax.set_yticks([.0025, .003, .004, .006, .008, .01, .012, .014],
+                  ["0.0025", "0.003", "0.004", "0.006", "0.008", "0.010", "0.012", "0.014"])
+    ax.minorticks_off()
+    ax.set_title("Hyperball vs AdamW: fitted optimal LR vs token budget")
+    ax.legend(fontsize=9)
+    save(fig, "p1d_optimal_lr_scaling.png")
 
 
 if __name__ == "__main__":
