@@ -34,6 +34,31 @@ The trend from the small budgets does not continue. The prediction holds at 1.22
 
 ![AdamW power laws fit over all six budgets and over the larger three, with 4.9152B predictions](p1c_two_rules.png)
 
+| Fit | Rule | Predicted $\eta^*$ at 4.9152B |
+| --- | --- | --- |
+| All six budgets | $\eta^* \propto D^{0.099}$ | 0.00373 |
+| Larger three (1.2288B–2.4576B) | $\eta^* \propto D^{-0.409}$ | 0.00223 |
+
+**Which prediction should give the lower loss?** The larger-three prediction. The optimal LR stopped rising after about 1.2B tokens, and the larger-three fit follows the trend closest to the target. The all-six fit averages the rising small-budget optima with the falling larger ones, so it still predicts an increase.
+
+![AdamW final validation loss vs peak LR at 4.9152B, with both predictions](p1c_target_lr_loss.png)
+
+| Peak LR | Source | Final validation loss | Gap vs best grid LR |
+| --- | --- | ---: | ---: |
+| 0.0015 | target grid | 2.7170 | best grid LR |
+| 0.00223 | larger-three prediction | **2.7156** | −0.0014 |
+| 0.003 | target grid | 2.7174 | +0.0004 |
+| 0.00373 | all-six prediction | 2.7205 | +0.0035 |
+| 0.006 | target grid | 2.7268 | +0.0098 |
+
+The fitted target optimum is 0.00208 ($\pm1\sigma$ 0.00182–0.00235). The larger-three prediction is 7% above it and the all-six prediction is 79% above it.
+
+**Gains from the smaller-budget fits.** The larger-three prediction beat the best grid LR by 0.0014, which is within seed noise (SD 0.0024). The all-six prediction, which relies on the smallest budgets, was 0.0035 worse. Including the small budgets did not help.
+
+**Bias–variance.** The all-six fit has low variance (exponent $\pm1\sigma$ 0.08–0.14) but is biased, because one power law cannot follow an optimum that rises and then falls. The larger-three fit has less bias but high variance (exponent $\pm1\sigma$ −0.71 to −0.24). Here bias dominated, so the noisier local fit predicted better.
+
+**Extrapolation.** The local fit held for a 2× extrapolation, from 2.4576B to 4.9152B. Because the trend reversed within the source budgets, a fit should only be trusted a short distance past the budgets it was fit on. Near the optimum the loss is flat: 0.0015–0.003 are within 0.0018 of the best run, so a modest LR error costs little at this budget.
+
 ## (d) Hyperball versus AdamW
 
 ![Hyperball final validation loss vs peak LR at each token budget](p1d_lr_loss_curves.png)

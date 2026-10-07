@@ -8,11 +8,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import wandb
 
+from experiments.a2.p1_learning_rate import EXPERIMENT_KEY as P1C_TAG, LEARNING_RATES as P1C_GRID
 from experiments.a2.provided_sweeps import load
 
 
 OUTPUT_DIR = Path(__file__).parents[1] / "notes" / "a2" / "p1"
+WANDB_PROJECT = "kesavanramakrishnan/cs312-assignments"
 # Seed-to-seed SD of final val loss at the default recipe, measured in A1 P3.
 SEED_NOISE_SD = 0.0024
 NUM_NOISE_DRAWS = 4000
@@ -23,6 +26,14 @@ TARGET_TOKENS = (4.9152e9,)
 
 def token_label(tokens):
     return f"{tokens / 1e6:g}M" if tokens < 1e9 else f"{tokens / 1e9:g}B"
+
+
+def load_wandb(tag):
+    """Finished runs with this tag, in the same row format as the supplied sweeps."""
+    runs = wandb.Api().runs(WANDB_PROJECT, filters={"tags": tag, "state": "finished"})
+    return [dict(tokens=run.config["num_train_sequences"] * 1024,
+                 learning_rate=run.config["learning_rate"],
+                 final_val_loss=run.summary["val_loss"]) for run in runs]
 
 
 def points_by_budget(rows):
@@ -238,6 +249,18 @@ def main():
     for law in (all_six_law, larger_law):
         print(f"== {law.label} ==")
         report_scaling(law)
+    target_rows = load_wandb(P1C_TAG)
+    target = fit_optima("AdamW 4.9152B target", target_rows, rng)
+    target_grid = fit_optima("AdamW 4.9152B target grid only",
+                             [row for row in target_rows if row["learning_rate"] in P1C_GRID], rng)
+    report_optima(target)
+    report_optima(target_grid)
+    best_grid_loss = min(row["final_val_loss"] for row in target_rows if row["learning_rate"] in P1C_GRID)
+    print(f"\nbest target-grid loss {best_grid_loss:.4f}")
+    for row in sorted(target_rows, key=lambda row: row["learning_rate"]):
+        print(f"lr={row['learning_rate']:<8g} loss={row['final_val_loss']:.4f}  "
+              f"gap vs best grid {row['final_val_loss'] - best_grid_loss:+.4f}")
+    print()
 
     fig, ax = plt.subplots(figsize=(7, 4.8))
     plot_curves(ax, adamw)
@@ -284,6 +307,16 @@ def main():
     ax.set_title("AdamW: two power-law fits and their 4.9152B predictions")
     ax.legend(fontsize=9)
     save(fig, "p1c_two_rules.png")
+
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    plot_curves(ax, target)
+    for law, color in ((all_six_law, "C2"), (larger_law, "C3")):
+        predicted = law.predict(TARGET_TOKENS)[0]
+        ax.axvline(predicted, color=color, linestyle=":",
+                   label=f"{law.label} prediction ({predicted:.5f})")
+    label_measured_lrs(ax, target)
+    ax.legend(fontsize=9)
+    save(fig, "p1c_target_lr_loss.png")
 
     fig, ax = plt.subplots(figsize=(7, 4.8))
     plot_curves(ax, hyperball)
