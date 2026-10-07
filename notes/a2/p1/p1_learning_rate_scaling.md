@@ -4,6 +4,14 @@
 
 ![AdamW final validation loss vs peak LR at each token budget](p1a_lr_loss_curves.png)
 
+Final validation loss of the supplied AdamW runs (WD 0.1; lowest per budget in bold):
+
+| Peak LR | 153.6M | 307.2M | 614.4M |
+| --- | ---: | ---: | ---: |
+| 0.0015 | 3.2442 | 3.0709 | 2.9473 |
+| 0.003 | **3.2291** | **3.0562** | **2.9256** |
+| 0.006 | 3.3056 | 3.0715 | 2.9408 |
+
 ![AdamW fitted optimal LR vs token budget](p1a_optimal_lr_scaling.png)
 
 Fitting a power law to the fitted optima gives the proposed scaling rule
@@ -25,6 +33,14 @@ Predicted optimal LRs from the power law in (a), recorded before inspecting the 
 | 2.4576B | 0.00440 |
 
 ![AdamW final validation loss vs peak LR at the P1(b) budgets](p1b_lr_loss_curves.png)
+
+Final validation loss of the supplied AdamW runs (WD 0.1; lowest per budget in bold):
+
+| Peak LR | 1.2288B | 1.8432B | 2.4576B |
+| --- | ---: | ---: | ---: |
+| 0.0015 | 2.8508 | 2.8060 | 2.7760 |
+| 0.003 | **2.8378** | **2.7967** | **2.7683** |
+| 0.006 | 2.8397 | 2.8008 | 2.7775 |
 
 ![AdamW predicted vs fitted optimal LR](p1b_predicted_vs_fitted.png)
 
@@ -62,6 +78,19 @@ The fitted target optimum is 0.00208 ($\pm1\sigma$ 0.00182–0.00235). The large
 ## (d) Hyperball versus AdamW
 
 ![Hyperball final validation loss vs peak LR at each token budget](p1d_lr_loss_curves.png)
+
+Final validation loss of the 24 supplied Hyperball runs (WD 0; lowest per budget in bold):
+
+| Peak LR | 153.6M | 307.2M | 614.4M |
+| --- | ---: | ---: | ---: |
+| 0.0003 | 4.6079 | 4.1946 | 3.8001 |
+| 0.001 | 3.9460 | 3.5495 | 3.2863 |
+| 0.0015 | 3.7064 | 3.3939 | 3.1730 |
+| 0.003 | 3.4326 | 3.2063 | 3.0364 |
+| 0.006 | 3.2596 | 3.0835 | 2.9494 |
+| 0.01 | 3.2113 | 3.0357 | **2.9176** |
+| 0.015 | **3.2040** | **3.0315** | 2.9183 |
+| 0.03 | 3.2533 | 3.0981 | 2.9962 |
 
 ![Hyperball vs AdamW fitted optimal LR vs token budget](p1d_optimal_lr_scaling.png)
 
