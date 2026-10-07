@@ -13,8 +13,13 @@ from modal_utils import (app, build_image, user_volume, VOLUME_MOUNTS,
                         MODAL_USER_DATASETS_DIR, timestamped_modal_app_name)
 
 
+ASSIGNMENT_TAG = 'a2'
+
+
 # Container paths come from the same mounts used by A1; no student-specific paths.
 def config(*, tokens=153_600_000, batch=64, diagnostics=True, **overrides):
+    tags = overrides.pop('wandb_tags', ())
+    overrides['wandb_tags'] = (ASSIGNMENT_TAG, *(t for t in tags if t != ASSIGNMENT_TAG))
     seed = overrides.pop('data_seed', DEFAULT_DATA_SEED)
     if seed != DEFAULT_DATA_SEED:
         raise ValueError('The A2 starter fixes data_seed=42; extend preparation explicitly for other seeds.')
