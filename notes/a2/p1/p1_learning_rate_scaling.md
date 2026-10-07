@@ -28,6 +28,8 @@ Predicted optimal LRs from the power law in (a), recorded before inspecting the 
 
 ![AdamW predicted vs fitted optimal LR](p1b_predicted_vs_fitted.png)
 
+The trend from the small budgets does not continue. The prediction holds at 1.2288B (predicted 0.00380, fitted 0.00388) but not after. The fitted optimum falls to 0.00343 at 1.8432B and 0.00291 at 2.4576B, so the power law overpredicts by 21% and 51%. The optimal LR stops rising after about 1.2B tokens and then decreases.
+
 ## (c) Compare and test two scaling rules
 
 ## (d) Hyperball versus AdamW
