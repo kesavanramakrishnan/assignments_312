@@ -190,12 +190,16 @@ def main():
     draws = [optimum_draws(points, rng) for points in budgets.values()]
     count = min(len(d) for d in draws)
     draws = np.stack([d[:count] for d in draws], axis=1)
-    for tokens, (lr, wd, loss) in optima.items():
-        print(f"{tokens / 1e6:7.1f}M  lr*={lr:.5f}  wd*={wd:.4f}  lr*wd*={lr * wd:.3e}  L*={loss:.4f}")
+    low, high = np.percentile(draws, [16, 84], axis=0)
+    for (tokens, (lr, wd, loss)), lo, hi in zip(optima.items(), low, high):
+        print(f"{tokens / 1e6:7.1f}M  lr*={lr:.5f} [{lo[0]:.5f}, {hi[0]:.5f}]  "
+              f"wd*={wd:.4f} [{lo[1]:.4f}, {hi[1]:.4f}]  lr*wd*={lr * wd:.3e}  L*={loss:.4f}")
 
     tokens = np.array(list(optima))
     lr_stars = np.array([lr for lr, _, _ in optima.values()])
     wd_stars = np.array([wd for _, wd, _ in optima.values()])
+    for name, values in (("lr*", lr_stars), ("wd*", wd_stars)):
+        print(f"single power law: {name} ∝ D^{fit_power_law(tokens, values)[0]:.3f}")
     products = lr_stars * wd_stars
     exponent, log_coefficient = fit_power_law(tokens, products)
     predicted_product = np.exp(log_coefficient + exponent * np.log(TEST_TOKENS))
