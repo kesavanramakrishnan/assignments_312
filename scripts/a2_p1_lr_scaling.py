@@ -11,6 +11,7 @@ import numpy as np
 import wandb
 
 from experiments.a2.p1_learning_rate import EXPERIMENT_KEY as P1C_TAG, LEARNING_RATES as P1C_GRID
+from experiments.a2.p1d_hyperball import EXPERIMENT_KEY as P1D_TAG
 from experiments.a2.provided_sweeps import load
 
 
@@ -261,6 +262,16 @@ def main():
         print(f"lr={row['learning_rate']:<8g} loss={row['final_val_loss']:.4f}  "
               f"gap vs best grid {row['final_val_loss'] - best_grid_loss:+.4f}")
     print()
+    hyperball_rows = load_wandb(P1D_TAG)
+    hyperball_target = fit_optima("Hyperball 1.2288B target", hyperball_rows, rng)
+    report_optima(hyperball_target)
+    points = hyperball_target.budgets[HYPERBALL_PREDICTION_TOKENS[0]]
+    lr_star_all, _, _ = quadratic_optimum(points[:, 0], points[:, 1])
+    print(f"all four points: lr* = {lr_star_all:.5f}")
+    best_loss = points[:, 1].min()
+    for lr, loss in points:
+        print(f"lr={lr:<8g} loss={loss:.4f}  gap vs best sampled {loss - best_loss:+.4f}")
+    print()
 
     fig, ax = plt.subplots(figsize=(7, 4.8))
     plot_curves(ax, adamw)
@@ -334,6 +345,14 @@ def main():
     ax.set_title("Hyperball vs AdamW: fitted optimal LR vs token budget")
     ax.legend(fontsize=9)
     save(fig, "p1d_optimal_lr_scaling.png")
+
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    plot_curves(ax, hyperball_target)
+    predicted = hyperball_law.predict(HYPERBALL_PREDICTION_TOKENS)[0]
+    ax.axvline(predicted, color="C3", linestyle=":", label=f"Hyperball prediction ({predicted:.4f})")
+    label_measured_lrs(ax, hyperball_target)
+    ax.legend(fontsize=9)
+    save(fig, "p1d_target_lr_loss.png")
 
 
 if __name__ == "__main__":

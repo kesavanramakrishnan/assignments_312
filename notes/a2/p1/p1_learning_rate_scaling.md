@@ -65,7 +65,31 @@ The fitted target optimum is 0.00208 ($\pm1\sigma$ 0.00182–0.00235). The large
 
 ![Hyperball vs AdamW fitted optimal LR vs token budget](p1d_optimal_lr_scaling.png)
 
+| Tokens | Hyperball fitted $\eta^*$ | AdamW fitted $\eta^*$ |
+| --- | --- | --- |
+| 153.6M | 0.0137 | 0.00238 |
+| 307.2M | 0.0129 | 0.00298 |
+| 614.4M | 0.0121 | 0.00319 |
+| Rule | $\eta^* \propto D^{-0.089}$ | $\eta^* \propto D^{0.213}$ |
+
+**Trend vs AdamW.** Hyperball's optimal LR falls slowly with budget (×0.94 per doubling), while AdamW's rises (×1.16 per doubling). Hyperball's two doublings give nearly the same ratio (0.944 and 0.937); AdamW's do not (1.25 and 1.07).
+
 Predicted optimal LR at 1.2288B from the Hyperball power law, recorded before running the target: 0.0114.
+
+![Hyperball final validation loss vs peak LR at 1.2288B, with the prediction](p1d_target_lr_loss.png)
+
+| Peak LR | Final validation loss | Gap vs best sampled |
+| --- | ---: | ---: |
+| 0.006 | 2.8441 | +0.0160 |
+| 0.01 | 2.8284 | +0.0003 |
+| 0.0114 (predicted) | **2.8281** | best |
+| 0.015 | 2.8358 | +0.0076 |
+
+**Prediction vs target.** The predicted LR gave the best sampled loss. The fitted target optimum is 0.0108 ($\pm1\sigma$ 0.0092–0.0118), 5% below the prediction. LR 0.01 is only 0.0003 worse, well within seed noise. At 1.2288B, Hyperball's best loss is 0.0097 below AdamW's best sampled loss (2.8378).
+
+**More regular?** Yes. Including the target, the Hyperball optimum changes by a similar factor each doubling (0.94, 0.94, 0.90). AdamW's changed by 1.25, 1.07, and 1.22, then reversed (0.75 from 1.2288B to 2.4576B). However, AdamW's rule also held at 1.2288B, so this single target cannot show whether Hyperball keeps its trend past the point where AdamW's broke.
+
+**Uncertainty from three source budgets.** Three budgets spanning 4× give an exponent of −0.089 with $\pm1\sigma$ −0.13 to −0.02. The direction is fairly clear, but the rate is not. The Hyperball loss is flat near its optimum, so each fitted optimum moves $\pm$4–6% under seed noise, and the fit window matters: four points give −0.134. A 2× extrapolation stays within this uncertainty. AdamW shows that a trend can reverse just past the source range, so three budgets cannot rule out a bend further out.
 
 ## (e) Explore schedule variants (optional)
 
