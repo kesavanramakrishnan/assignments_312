@@ -3,7 +3,6 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 import torch
-import wandb
 from torch.nn import DataParallel
 from torch.nn import functional as F
 
@@ -416,7 +415,14 @@ def select_train_sequences(train_dataset, config):
     return train_dataset.select(range(num_train_sequences))
 
 
-def _open_wandb_run(config, run_name, run_config, checkpointer, start_step):
+_OPENED_WANDB_RUN_IDS = set()
+
+
+def _reattached_earlier_run(wandb_run, requested_id):
+    return wandb_run.id != requested_id and wandb_run.id in _OPENED_WANDB_RUN_IDS
+
+
+def _open_wandb_run(wandb, config, run_name, run_config, checkpointer, start_step):
     """Open one W&B run for this training job.
 
     Resume only when this process actually restored a checkpoint. Otherwise
@@ -449,7 +455,7 @@ def _open_wandb_run(config, run_name, run_config, checkpointer, start_step):
         init_kwargs["resume"] = "allow"
 
     wandb_run = wandb.init(**init_kwargs)
-    if wandb_run.id != wandb_run_id:
+    if _reattached_earlier_run(wandb_run, wandb_run_id):
         attached_id = wandb_run.id
         wandb_run.finish()
         wandb.teardown()
@@ -463,12 +469,13 @@ def _open_wandb_run(config, run_name, run_config, checkpointer, start_step):
                 wandb_project=config.wandb_project,
             )
         wandb_run = wandb.init(**init_kwargs)
-        if wandb_run.id != wandb_run_id:
+        if _reattached_earlier_run(wandb_run, wandb_run_id):
             raise RuntimeError(
                 "W&B kept an existing run open across configs: "
                 f"requested {wandb_run_id}, attached {wandb_run.id} "
                 f"(previous attach was {attached_id})."
             )
+    _OPENED_WANDB_RUN_IDS.add(wandb_run.id)
 
     if checkpointer.enabled:
         checkpointer.write_wandb_run_state(
@@ -646,7 +653,12 @@ def train(config):
 
     wandb_run_id = None
     if config.wandb_online:
+        # Imported lazily so offline runs never load wandb and the A2 tests can
+        # stub it through sys.modules.
+        import wandb
+
         wandb_run_id = _open_wandb_run(
+            wandb,
             config,
             run_name=run_name,
             run_config=run_config,
