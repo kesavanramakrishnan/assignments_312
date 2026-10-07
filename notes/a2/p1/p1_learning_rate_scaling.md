@@ -32,6 +32,8 @@ The trend from the small budgets does not continue. The prediction holds at 1.22
 
 ## (c) Compare and test two scaling rules
 
+![AdamW power laws fit over all six budgets and over the larger three, with 4.9152B predictions](p1c_two_rules.png)
+
 ## (d) Hyperball versus AdamW
 
 ## (e) Explore schedule variants (optional)
