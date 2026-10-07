@@ -16,9 +16,7 @@ Final validation loss of the supplied AdamW runs (WD 0.1; lowest per budget in b
 
 Fitting a power law to the fitted optima gives the proposed scaling rule
 
-$$
-\eta^*(D) = 0.00328\left(\frac{D}{614.4\text{M}}\right)^{0.213}
-$$
+η\*(D) = 0.00328 · (D / 614.4M)^0.213
 
 From what we see, the optimal LR rises with token count.
 
@@ -26,7 +24,7 @@ From what we see, the optimal LR rises with token count.
 
 Predicted optimal LRs from the power law in (a), recorded before inspecting the P1(b) measurements:
 
-| Tokens | Predicted $\eta^*$ |
+| Tokens | Predicted η\* |
 | --- | --- |
 | 1.2288B | 0.00380 |
 | 1.8432B | 0.00414 |
@@ -50,10 +48,10 @@ The trend from the small budgets does not continue. The prediction holds at 1.22
 
 ![AdamW power laws fit over all six budgets and over the larger three, with 4.9152B predictions](p1c_two_rules.png)
 
-| Fit | Rule | Predicted $\eta^*$ at 4.9152B |
+| Fit | Rule | Predicted η\* at 4.9152B |
 | --- | --- | --- |
-| All six budgets | $\eta^* \propto D^{0.099}$ | 0.00373 |
-| Larger three (1.2288B–2.4576B) | $\eta^* \propto D^{-0.409}$ | 0.00223 |
+| All six budgets | η\* ∝ D^0.099 | 0.00373 |
+| Larger three (1.2288B–2.4576B) | η\* ∝ D^−0.409 | 0.00223 |
 
 **Which prediction should give the lower loss?** The larger-three prediction. The optimal LR stopped rising after about 1.2B tokens, and the larger-three fit follows the trend closest to the target. The all-six fit averages the rising small-budget optima with the falling larger ones, so it still predicts an increase.
 
@@ -67,11 +65,11 @@ The trend from the small budgets does not continue. The prediction holds at 1.22
 | 0.00373 | all-six prediction | 2.7205 | +0.0035 |
 | 0.006 | target grid | 2.7268 | +0.0098 |
 
-The fitted target optimum is 0.00208 ($\pm1\sigma$ 0.00182–0.00235). The larger-three prediction is 7% above it and the all-six prediction is 79% above it.
+The fitted target optimum is 0.00208 (±1σ 0.00182–0.00235). The larger-three prediction is 7% above it and the all-six prediction is 79% above it.
 
 **Gains from the smaller-budget fits.** The larger-three prediction beat the best grid LR by 0.0014, which is within seed noise (SD 0.0024). The all-six prediction, which relies on the smallest budgets, was 0.0035 worse. Including the small budgets did not help.
 
-**Bias–variance.** The all-six fit has low variance (exponent $\pm1\sigma$ 0.08–0.14) but is biased, because one power law cannot follow an optimum that rises and then falls. The larger-three fit has less bias but high variance (exponent $\pm1\sigma$ −0.71 to −0.24). Here bias dominated, so the noisier local fit predicted better.
+**Bias–variance.** The all-six fit has low variance (exponent ±1σ 0.08–0.14) but is biased, because one power law cannot follow an optimum that rises and then falls. The larger-three fit has less bias but high variance (exponent ±1σ −0.71 to −0.24). Here bias dominated, so the noisier local fit predicted better.
 
 **Extrapolation.** The local fit held for a 2× extrapolation, from 2.4576B to 4.9152B. Because the trend reversed within the source budgets, a fit should only be trusted a short distance past the budgets it was fit on. Near the optimum the loss is flat: 0.0015–0.003 are within 0.0018 of the best run, so a modest LR error costs little at this budget.
 
@@ -94,12 +92,12 @@ Final validation loss of the 24 supplied Hyperball runs (WD 0; lowest per budget
 
 ![Hyperball vs AdamW fitted optimal LR vs token budget](p1d_optimal_lr_scaling.png)
 
-| Tokens | Hyperball fitted $\eta^*$ | AdamW fitted $\eta^*$ |
+| Tokens | Hyperball fitted η\* | AdamW fitted η\* |
 | --- | --- | --- |
 | 153.6M | 0.0137 | 0.00238 |
 | 307.2M | 0.0129 | 0.00298 |
 | 614.4M | 0.0121 | 0.00319 |
-| Rule | $\eta^* \propto D^{-0.089}$ | $\eta^* \propto D^{0.213}$ |
+| Rule | η\* ∝ D^−0.089 | η\* ∝ D^0.213 |
 
 **Trend vs AdamW.** Hyperball's optimal LR falls slowly with budget (×0.94 per doubling), while AdamW's rises (×1.16 per doubling). Hyperball's two doublings give nearly the same ratio (0.944 and 0.937); AdamW's do not (1.25 and 1.07).
 
@@ -114,11 +112,11 @@ Predicted optimal LR at 1.2288B from the Hyperball power law, recorded before ru
 | 0.0114 (predicted) | **2.8281** | best |
 | 0.015 | 2.8358 | +0.0076 |
 
-**Prediction vs target.** The predicted LR gave the best sampled loss. The fitted target optimum is 0.0108 ($\pm1\sigma$ 0.0092–0.0118), 5% below the prediction. LR 0.01 is only 0.0003 worse, well within seed noise. At 1.2288B, Hyperball's best loss is 0.0097 below AdamW's best sampled loss (2.8378).
+**Prediction vs target.** The predicted LR gave the best sampled loss. The fitted target optimum is 0.0108 (±1σ 0.0092–0.0118), 5% below the prediction. LR 0.01 is only 0.0003 worse, well within seed noise. At 1.2288B, Hyperball's best loss is 0.0097 below AdamW's best sampled loss (2.8378).
 
 **More regular?** Yes. Including the target, the Hyperball optimum changes by a similar factor each doubling (0.94, 0.94, 0.90). AdamW's changed by 1.25, 1.07, and 1.22, then reversed (0.75 from 1.2288B to 2.4576B). However, AdamW's rule also held at 1.2288B, so this single target cannot show whether Hyperball keeps its trend past the point where AdamW's broke.
 
-**Uncertainty from three source budgets.** Three budgets spanning 4× give an exponent of −0.089 with $\pm1\sigma$ −0.13 to −0.02. The direction is fairly clear, but the rate is not. The Hyperball loss is flat near its optimum, so each fitted optimum moves $\pm$4–6% under seed noise, and the fit window matters: four points give −0.134. A 2× extrapolation stays within this uncertainty. AdamW shows that a trend can reverse just past the source range, so three budgets cannot rule out a bend further out.
+**Uncertainty from three source budgets.** Three budgets spanning 4× give an exponent of −0.089 with ±1σ −0.13 to −0.02. The direction is fairly clear, but the rate is not. The Hyperball loss is flat near its optimum, so each fitted optimum moves ±4–6% under seed noise, and the fit window matters: four points give −0.134. A 2× extrapolation stays within this uncertainty. AdamW shows that a trend can reverse just past the source range, so three budgets cannot rule out a bend further out.
 
 ## (e) Explore schedule variants (optional)
 

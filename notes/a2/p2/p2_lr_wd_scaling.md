@@ -6,19 +6,19 @@
 
 ![Fitted optimal LR and WD vs token budget, with Problem 1's optimal LR at WD .1](p2a_optima_vs_tokens.png)
 
-| Tokens | Fitted $\eta^*$ ($\pm1\sigma$) | Fitted $\lambda^*$ ($\pm1\sigma$) | Problem 1 $\eta^*$ (WD 0.1) |
+| Tokens | Fitted η\* (±1σ) | Fitted λ\* (±1σ) | Problem 1 η\* (WD 0.1) |
 | --- | --- | --- | --- |
 | 153.6M | 0.00186 (0.00183–0.00189) | 0.847 (0.825–0.867) | 0.00238 |
 | 307.2M | 0.00160 (0.00134–0.00178) | 0.519 (0.452–0.660) | 0.00298 |
 | 614.4M | 0.00247 (0.00226–0.00258) | 0.258 (0.229–0.332) | 0.00319 |
 | 1.2288B | 0.00270 (0.00203–0.00349) | 0.162 (0.119–0.216) | 0.00388 |
-| Single power law | $\propto D^{0.22}$ | $\propto D^{-0.82}$ | |
+| Single power law | ∝ D^0.22 | ∝ D^−0.82 | |
 
 **Optimal LR and WD vs scale.** Optimal WD decreases steadily with budget, from 0.85 at 153.6M to 0.16 at 1.2288B (×0.50–0.63 per doubling). Optimal LR increases overall, from 0.00186 to 0.00270, but not monotonically: it dips to 0.00160 at 307.2M.
 
-**LR trend vs Problem 1.** Both rise at a similar overall rate ($D^{0.22}$ here, $D^{0.21}$ in Problem 1(a)). The joint optimum is 22–46% lower at every budget, where its WD is also above Problem 1's 0.1.
+**LR trend vs Problem 1.** Both rise at a similar overall rate (D^0.22 here, D^0.21 in Problem 1(a)). The joint optimum is 22–46% lower at every budget, where its WD is also above Problem 1's 0.1.
 
-**Single power law?** WD, yes: it falls by a similar factor each doubling and stays close to $D^{-0.82}$. LR, no: the dip at 307.2M breaks the trend, and the 1.2288B optimum is poorly constrained ($\pm1\sigma$ 0.0020–0.0035).
+**Single power law?** WD, yes: it falls by a similar factor each doubling and stays close to D^−0.82. LR, no: the dip at 307.2M breaks the trend, and the 1.2288B optimum is poorly constrained (±1σ 0.0020–0.0035).
 
 ![Best measured validation loss from joint LR-WD tuning vs Problem 1, and their difference](p2a_best_loss_vs_p1.png)
 
