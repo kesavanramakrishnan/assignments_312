@@ -33,6 +33,27 @@
 
 ## (b) From coupling to a joint scaling law
 
+![Quadratic fits with the line ηλ = η\*λ\* and the fitted valley direction through each optimum](p2b_contours_product_line.png)
+
+Fitted loss rise for a 2× move away from the optimum. The valley slope is d log λ / d log η along the fitted surface's flattest direction; the line ηλ = const has slope −1.
+
+| Tokens | Valley slope | Along ηλ = η\*λ\* | LR only | WD only |
+| --- | ---: | ---: | ---: | ---: |
+| 153.6M | −2.33 | +0.0376 | +0.0468 | +0.0195 |
+| 307.2M | −1.86 | +0.0098 | +0.0148 | +0.0069 |
+| 614.4M | −2.81 | +0.0136 | +0.0196 | +0.0055 |
+| 1.2288B | −1.11 | +0.0020 | +0.0086 | +0.0072 |
+
+![Optimal LR, optimal WD, and their product vs token budget, each with a single power-law fit](p2b_lr_wd_product_scaling.png)
+
+Single power-law fits over the four budgets (R² in log-log space; ±1σ from seed-noise refits):
+
+| Variable | Exponent | R² (±1σ) | Change per doubling |
+| --- | ---: | --- | --- |
+| η\* | +0.22 | 0.678 (0.25–0.78) | ×0.86, ×1.54, ×1.09 |
+| λ\* | −0.82 | 0.994 (0.82–0.99) | ×0.61, ×0.50, ×0.63 |
+| η\*λ\* | −0.59 | 0.967 (0.90–0.98) | ×0.53, ×0.77, ×0.69 |
+
 ## (c) Test the joint rule
 
 ## Synthesis

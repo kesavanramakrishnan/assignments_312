@@ -80,15 +80,39 @@ def lr_only_best_losses():
     return dict(sorted(best.items()))
 
 
-def save(fig, name):
-    fig.tight_layout()
+def save(fig, name, rect=(0, 0, 1, 1)):
+    fig.tight_layout(rect=rect)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUTPUT_DIR / name
     fig.savefig(path, dpi=150)
     print(f"saved {path}")
 
 
-def plot_contours(budgets, fits, optima):
+def valley_slope(coefficients):
+    """d log(WD) / d log(LR) along the fitted surface's flattest direction."""
+    _, _, _, d, e, f = coefficients
+    _, vectors = np.linalg.eigh(np.array([[2 * d, e], [e, 2 * f]]))
+    x, y = vectors[:, 0]
+    return y / x
+
+
+def r_squared(tokens, values):
+    """R^2 of a power law, measured in log-log space."""
+    exponent, log_coefficient = fit_power_law(tokens, values)
+    log_values = np.log(values)
+    residuals = log_values - (log_coefficient + exponent * np.log(tokens))
+    return 1 - np.sum(residuals**2) / np.sum((log_values - log_values.mean())**2)
+
+
+def draw_product_lines(ax, lr_grid, optimum, slope):
+    lr_star, wd_star, _ = optimum
+    ax.plot(lr_grid, lr_star * wd_star / lr_grid, "--", color="white", linewidth=2,
+            label="ηλ = η*λ* (slope −1)")
+    ax.plot(lr_grid, wd_star * (lr_grid / lr_star)**slope, ":", color="red", linewidth=2,
+            label="fitted valley direction")
+
+
+def plot_contours(budgets, fits, optima, name, product_lines=False):
     fig, axes = plt.subplots(2, 2, figsize=(11, 9))
     for ax, (tokens, points) in zip(axes.flat, budgets.items()):
         lrs, wds = np.unique(points[:, 0]), np.unique(points[:, 1])
@@ -105,19 +129,33 @@ def plot_contours(budgets, fits, optima):
             ax.annotate(f"{loss:.4f}", (lr, wd), textcoords="offset points", xytext=(5, 5), fontsize=8,
                         bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.75))
         lr_star, wd_star, loss_star = optima[tokens]
-        ax.plot(lr_star, wd_star, "*", color="red", markersize=16, markeredgecolor="k",
-                label=f"fitted optimum ({lr_star:.5f}, {wd_star:.3f})")
+        title = f"{p1.token_label(tokens)} tokens"
+        optimum_label = f"fitted optimum ({lr_star:.5f}, {wd_star:.3f})"
+        if product_lines:
+            slope = valley_slope(fits[tokens])
+            draw_product_lines(ax, lr_grid, optima[tokens], slope)
+            title += f": η*λ* = {lr_star * wd_star:.2e}, valley slope {slope:.2f}"
+            optimum_label = "fitted optimum"
+        ax.plot(lr_star, wd_star, "*", color="red", markersize=16, markeredgecolor="k", label=optimum_label)
         ax.set_xscale("log")
         ax.set_yscale("log")
+        ax.set_xlim(lr_grid[0], lr_grid[-1])
+        ax.set_ylim(wd_grid[0], wd_grid[-1])
         ax.set_xticks(lrs, [f"{lr:g}" for lr in lrs])
         ax.set_yticks(wds, [f"{wd:g}" for wd in wds])
         ax.minorticks_off()
         ax.set_xlabel("peak learning rate")
         ax.set_ylabel("weight decay")
-        ax.set_title(f"{p1.token_label(tokens)} tokens")
-        ax.legend(fontsize=8, loc="lower left")
+        ax.set_title(title, fontsize=10)
+        if not product_lines:
+            ax.legend(fontsize=8, loc="lower left")
     fig.suptitle("Local quadratic fits in (log LR, log WD); stars mark fitted optima")
-    save(fig, "p2a_lr_wd_contours.png")
+    if product_lines:
+        fig.legend(*axes.flat[0].get_legend_handles_labels(), loc="lower center", ncol=3,
+                   facecolor="lightgray")
+        save(fig, name, rect=(0, 0.04, 1, 1))
+    else:
+        save(fig, name)
 
 
 def plot_errorbars(ax, tokens, values, draws, color, label):
@@ -126,11 +164,34 @@ def plot_errorbars(ax, tokens, values, draws, color, label):
                 label=label)
 
 
-def plot_power_law(ax, tokens, values, color):
+def plot_power_law(ax, tokens, values, color, show_r2=False):
     exponent, log_coefficient = fit_power_law(tokens, values)
     line = np.geomspace(tokens.min() / 1.2, tokens.max() * 1.2, 100)
-    ax.plot(line, np.exp(log_coefficient) * line**exponent, "--", color=color, alpha=0.7,
-            label=rf"single power law $\propto D^{{{exponent:.2f}}}$")
+    label = rf"single power law $\propto D^{{{exponent:.2f}}}$"
+    if show_r2:
+        label += f", R² = {r_squared(tokens, values):.3f}"
+    ax.plot(line, np.exp(log_coefficient) * line**exponent, "--", color=color, alpha=0.7, label=label)
+
+
+def plot_scaling_comparison(tokens, lr_stars, wd_stars, draws):
+    """Optimal LR, WD, and their product vs tokens, each with one power law."""
+    series = (("optimal peak LR η*", lr_stars, draws[..., 0], "C0", [.0012, .0015, .002, .0025, .003, .004]),
+              ("optimal weight decay λ*", wd_stars, draws[..., 1], "C2", [.1, .15, .2, .3, .5, .8, 1.2]),
+              ("product η*λ*", lr_stars * wd_stars, draws[..., 0] * draws[..., 1], "C4",
+               [3e-4, 4e-4, 6e-4, 8e-4, 1e-3, 1.5e-3, 2e-3]))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
+    for ax, (name, values, value_draws, color, ticks) in zip(axes, series):
+        plot_errorbars(ax, tokens, values, value_draws, color, "fitted optimum (±1σ)")
+        plot_power_law(ax, tokens, values, color, show_r2=True)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_yticks(ticks, [f"{t:g}" for t in ticks])
+        p1.label_token_budgets(ax, tokens)
+        ax.set_xlabel("training tokens D")
+        ax.set_ylabel(name)
+        ax.set_title(f"{name} vs token budget")
+        ax.legend(fontsize=9)
+    save(fig, "p2b_lr_wd_product_scaling.png")
 
 
 def plot_optima_vs_tokens(tokens, lr_stars, wd_stars, draws, lr_only):
@@ -216,9 +277,29 @@ def main():
     for t, j, s in zip(tokens, joint_best, lr_only_best):
         print(f"{t / 1e6:7.1f}M  best joint {j:.4f}  best P1 {s:.4f}  P1 - joint {s - j:+.4f}")
 
-    plot_contours(budgets, fits, optima)
+    print("\nfitted loss rise for a 2x change from the optimum: along ηλ = const vs one coordinate alone")
+    for t, coefficients in fits.items():
+        lr, wd, loss = optima[t]
+        along = [quadratic_value(coefficients, lr * k, wd / k) - loss for k in (2, .5)]
+        lr_only_moves = [quadratic_value(coefficients, lr * k, wd) - loss for k in (2, .5)]
+        wd_only_moves = [quadratic_value(coefficients, lr, wd * k) - loss for k in (2, .5)]
+        print(f"{t / 1e6:7.1f}M  valley slope {valley_slope(coefficients):+.2f}  "
+              f"along product {along[0]:+.4f}/{along[1]:+.4f}  LR only {lr_only_moves[0]:+.4f}/{lr_only_moves[1]:+.4f}  "
+              f"WD only {wd_only_moves[0]:+.4f}/{wd_only_moves[1]:+.4f}")
+
+    print("\npower-law fits vs tokens (R² in log-log, ±1σ from seed-noise refits)")
+    for name, values, value_draws in (("lr*", lr_stars, draws[..., 0]), ("wd*", wd_stars, draws[..., 1]),
+                                      ("lr*wd*", products, draws[..., 0] * draws[..., 1])):
+        r2_low, r2_high = np.percentile([r_squared(tokens, d) for d in value_draws], [16, 84])
+        ratios = ", ".join(f"{r:.2f}" for r in values[1:] / values[:-1])
+        print(f"{name:7s} exponent {fit_power_law(tokens, values)[0]:+.3f}  "
+              f"R² {r_squared(tokens, values):.3f} [{r2_low:.3f}, {r2_high:.3f}]  per doubling {ratios}")
+
+    plot_contours(budgets, fits, optima, "p2a_lr_wd_contours.png")
+    plot_contours(budgets, fits, optima, "p2b_contours_product_line.png", product_lines=True)
     plot_optima_vs_tokens(tokens, lr_stars, wd_stars, draws, lr_only)
     plot_loss_comparison(tokens, joint_best, lr_only_best)
+    plot_scaling_comparison(tokens, lr_stars, wd_stars, draws)
 
 
 if __name__ == "__main__":
