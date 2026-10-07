@@ -24,6 +24,10 @@ Predicted optimal LRs from the power law in (a), recorded before inspecting the 
 | 1.8432B | 0.00414 |
 | 2.4576B | 0.00440 |
 
+![AdamW final validation loss vs peak LR at the P1(b) budgets](p1b_lr_loss_curves.png)
+
+![AdamW predicted vs fitted optimal LR](p1b_predicted_vs_fitted.png)
+
 ## (c) Compare and test two scaling rules
 
 ## (d) Hyperball versus AdamW
