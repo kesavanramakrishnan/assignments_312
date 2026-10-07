@@ -1,3 +1,4 @@
+import os
 from pathlib import Path, PurePosixPath
 
 import modal
@@ -120,12 +121,25 @@ def ignore_source_path(path: Path) -> bool:
     return path.suffix in {".pyc", ".pyo"}
 
 
+def _with_b200_torch(image: modal.Image) -> modal.Image:
+    # torch 2.6 has no Blackwell kernels. B200 (sm_100) needs the CUDA 12.8 wheel.
+    gpu = os.environ.get("DL_ALCHEMY_MODAL_GPU", "")
+    if not gpu.startswith("B200"):
+        return image
+    return image.run_commands(
+        "uv pip install --python /.uv/.venv/bin/python --reinstall "
+        "torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128"
+    )
+
+
 def build_image(*, include_tests: bool = False) -> modal.Image:
-    image = (
+    image = _with_b200_torch(
         modal.Image.debian_slim(python_version="3.11")
         .apt_install("wget", "gzip")
         .uv_sync(uv_project_dir=str(REPO_ROOT))
-        .workdir(str(MODAL_REPO_DIR))
+    )
+    image = (
+        image.workdir(str(MODAL_REPO_DIR))
         .env(
             {
                 "DL_ALCHEMY_DATA_DIR": str(MODAL_SHARED_DATASETS_DIR),

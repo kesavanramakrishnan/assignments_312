@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 import torch
+import wandb
 from torch.nn import DataParallel
 from torch.nn import functional as F
 
@@ -68,6 +69,8 @@ class TrainConfig:
     tie_word_embeddings: bool = False
     deterministic: bool = False
     perturb_one_token: bool = False
+    perturb_step: int | None = None
+    perturb_scale: float | None = None
     wandb_tags: tuple[str, ...] = field(default_factory=tuple)
     wandb_online: bool = True
     force_run: bool = False
@@ -159,6 +162,8 @@ def training_run_name(config):
         run_name += "-deterministic"
     if config.perturb_one_token != TrainConfig.perturb_one_token:
         run_name += "-perturb1tok"
+    if config.perturb_step is not None:
+        run_name += f"-perturbT{config.perturb_step}-s{config.perturb_scale}"
     if config.data_seed != TrainConfig.data_seed:
         if config.data_seed is None:
             run_name += "-dsnone"
@@ -315,6 +320,25 @@ def checked_train_config(config):
             "perturb_one_token must be bool, got "
             f"{type(config.perturb_one_token).__name__}."
         )
+    step_set = config.perturb_step is not None
+    scale_set = config.perturb_scale is not None
+    if step_set != scale_set:
+        raise ValueError("perturb_step and perturb_scale must be set together.")
+    if step_set:
+        if isinstance(config.perturb_step, bool) or not isinstance(config.perturb_step, int):
+            raise TypeError(
+                f"perturb_step must be an int, got {config.perturb_step!r}."
+            )
+        if config.perturb_step < 0:
+            raise ValueError(f"perturb_step must be >= 0, got {config.perturb_step}.")
+        if isinstance(config.perturb_scale, bool) or not isinstance(
+            config.perturb_scale, (int, float)
+        ):
+            raise TypeError(
+                f"perturb_scale must be a float, got {config.perturb_scale!r}."
+            )
+        if config.perturb_scale <= 0:
+            raise ValueError(f"perturb_scale must be positive, got {config.perturb_scale}.")
     if config.deterministic and config.model_seed is None:
         raise ValueError("deterministic=True requires model_seed to be set.")
     if config.model_builder_kwargs is None:
@@ -387,6 +411,89 @@ def select_train_sequences(train_dataset, config):
     return train_dataset.select(range(num_train_sequences))
 
 
+def _open_wandb_run(config, run_name, run_config, checkpointer, start_step):
+    """Open one W&B run for this training job.
+
+    Resume only when this process actually restored a checkpoint. Otherwise
+    mint a new id. Modal keeps the worker process across jobs, and a live
+    wandb service will attach the next config to the previous run.
+    """
+    if wandb.run is not None:
+        wandb.run.finish()
+    wandb.teardown()
+
+    stored_run_id = checkpointer.wandb_run_id() if start_step > 0 else None
+    wandb_run_id = stored_run_id or wandb.util.generate_id()
+    if checkpointer.enabled:
+        checkpointer.write_wandb_run_state(
+            wandb_run_id,
+            wandb_entity=config.wandb_entity,
+            wandb_project=config.wandb_project,
+        )
+
+    init_kwargs = {
+        "entity": config.wandb_entity,
+        "project": config.wandb_project,
+        "name": run_name,
+        "id": wandb_run_id,
+        "config": run_config,
+        "tags": list(config.wandb_tags),
+        "reinit": True,
+    }
+    if stored_run_id is not None:
+        init_kwargs["resume"] = "allow"
+
+    wandb_run = wandb.init(**init_kwargs)
+    if wandb_run.id != wandb_run_id:
+        attached_id = wandb_run.id
+        wandb_run.finish()
+        wandb.teardown()
+        wandb_run_id = wandb.util.generate_id()
+        init_kwargs["id"] = wandb_run_id
+        init_kwargs.pop("resume", None)
+        if checkpointer.enabled:
+            checkpointer.write_wandb_run_state(
+                wandb_run_id,
+                wandb_entity=config.wandb_entity,
+                wandb_project=config.wandb_project,
+            )
+        wandb_run = wandb.init(**init_kwargs)
+        if wandb_run.id != wandb_run_id:
+            raise RuntimeError(
+                "W&B kept an existing run open across configs: "
+                f"requested {wandb_run_id}, attached {wandb_run.id} "
+                f"(previous attach was {attached_id})."
+            )
+
+    if checkpointer.enabled:
+        checkpointer.write_wandb_run_state(
+            wandb_run.id,
+            wandb_entity=config.wandb_entity,
+            wandb_project=config.wandb_project,
+        )
+    wandb.define_metric("optimizer_step")
+    wandb.define_metric("*", step_metric="optimizer_step")
+    print(f"WANDB_RUN_URL={wandb_run.url}")
+    return wandb_run.id
+
+
+def perturb_parameters(model, scale):
+    seen = set()
+    with torch.no_grad():
+        for param in model.parameters():
+            if not param.is_floating_point() or param.numel() == 0:
+                continue
+            identity = param.data_ptr()
+            if identity in seen:
+                continue
+            seen.add(identity)
+            std = param.detach().float().std(unbiased=False)
+            if not torch.isfinite(std) or std.item() == 0.0:
+                continue
+            noise = torch.randn_like(param) * (float(scale) * std.to(param.dtype))
+            param.add_(noise)
+
+
 def train(config):
     train_start_time = time.perf_counter()
     config = checked_train_config(config)
@@ -438,6 +545,8 @@ def train(config):
         return completed_model
 
     print(f"Found {num_cuda_devices} CUDA devices; using {device}")
+    if num_cuda_devices > 0:
+        print(f"CUDA device name: {torch.cuda.get_device_name(0)}")
     if config.num_micro_batches > 1:
         assert not torch_compile_enabled
         print("Skipping torch.compile because num_micro_batches > 1.")
@@ -475,6 +584,11 @@ def train(config):
         )
     warmup_steps = int(total_steps * config.warmup_percent)
     eval_steps = (total_steps // config.num_evals) + 1
+    if config.perturb_step is not None and config.perturb_step >= total_steps:
+        raise ValueError(
+            f"perturb_step={config.perturb_step} must be less than "
+            f"total_steps={total_steps}."
+        )
 
     scheduler = build_scheduler(
         optimizer,
@@ -523,39 +637,15 @@ def train(config):
         print(f"Compiling training loss with torch.compile(mode={torch_compile_mode!r})")
         training_loss = torch.compile(training_loss, mode=torch_compile_mode)
 
-    wandb_run_id = checkpointer.wandb_run_id()
-
+    wandb_run_id = None
     if config.wandb_online:
-        import wandb
-
-        if checkpointer.enabled and wandb_run_id is None:
-            wandb_run_id = wandb.util.generate_id()
-            checkpointer.write_wandb_run_state(
-                wandb_run_id,
-                wandb_entity=config.wandb_entity,
-                wandb_project=config.wandb_project,
-            )
-        wandb_kwargs = {
-            "entity": config.wandb_entity,
-            "project": config.wandb_project,
-            "name": run_name,
-            "config": run_config,
-            "tags": list(config.wandb_tags),
-        }
-        if wandb_run_id is not None:
-            wandb_kwargs["id"] = wandb_run_id
-            wandb_kwargs["resume"] = "allow"
-        wandb_run = wandb.init(**wandb_kwargs)
-        wandb_run_id = wandb_run.id
-        if checkpointer.enabled:
-            checkpointer.write_wandb_run_state(
-                wandb_run_id,
-                wandb_entity=config.wandb_entity,
-                wandb_project=config.wandb_project,
-            )
-        wandb.define_metric("optimizer_step")
-        wandb.define_metric("*", step_metric="optimizer_step")
-        print(f"WANDB_RUN_URL={wandb_run.url}")
+        wandb_run_id = _open_wandb_run(
+            config,
+            run_name=run_name,
+            run_config=run_config,
+            checkpointer=checkpointer,
+            start_step=start_step,
+        )
 
     metric_loggers.setup(
         LoggerContext(
@@ -578,6 +668,12 @@ def train(config):
     try:
         with checkpointer.capture_interrupts() as interrupt_state:
             for step in range(start_step, total_steps):
+                if config.perturb_step is not None and step == config.perturb_step:
+                    perturb_parameters(base_model, config.perturb_scale)
+                    print(
+                        "Perturbed parameters at optimizer step "
+                        f"{step} with relative scale {config.perturb_scale}"
+                    )
                 step_start_time = time.perf_counter()
                 current_loss_tensor = None
                 for micro_batch in range(config.num_micro_batches):
@@ -761,5 +857,8 @@ def train(config):
 
     if config.wandb_online:
         wandb.finish(exit_code=255 if interrupted else 0)
+        # Modal reuses the process for the next config. Tear down the wandb
+        # service so that job cannot resume this run id.
+        wandb.teardown()
 
     return base_model

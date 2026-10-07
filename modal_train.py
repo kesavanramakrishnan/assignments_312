@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 
 
 DEFAULT_MODAL_GPU = "H100"
+# The function decorator is fixed at import. A later with_options(gpu=...) call
+# does not replace an H100 already set on the function, so a non-default GPU
+# has to be chosen before this module is imported.
+TRAINING_GPU = os.environ.get("DL_ALCHEMY_MODAL_GPU", DEFAULT_MODAL_GPU)
 
 
 def _print_launched_training_jobs(jobs):
@@ -90,7 +94,7 @@ def _completed_model_exists(config: "TrainConfig") -> tuple[bool, str | None]:
     image=build_image(),
     volumes=VOLUME_MOUNTS,
     secrets=secrets(),
-    gpu=DEFAULT_MODAL_GPU,
+    gpu=TRAINING_GPU,
     max_containers=1,
     retries=modal.Retries(initial_delay=0.0, max_retries=10),
     timeout=24 * 60 * 60,
@@ -147,6 +151,13 @@ def launch_training_jobs(
     if max_parallel_runs < 1:
         raise ValueError(
             f"max_parallel_runs must be positive, got {max_parallel_runs}."
+        )
+    if gpu != TRAINING_GPU:
+        raise RuntimeError(
+            f"_run_training was created with gpu={TRAINING_GPU!r}, but this "
+            f"launch requested {gpu!r}. with_options does not replace the GPU "
+            "on that function. Rerun in a fresh process with "
+            f"DL_ALCHEMY_MODAL_GPU={gpu} so the function is created on that GPU."
         )
 
     jobs = []
