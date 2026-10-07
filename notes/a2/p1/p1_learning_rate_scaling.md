@@ -95,3 +95,5 @@ Predicted optimal LR at 1.2288B from the Hyperball power law, recorded before ru
 
 ## Synthesis
 
+With AdamW, the optimal LR rose with budget up to about 1.2B tokens (0.00238 at 153.6M to 0.00388 at 1.2288B), then fell (0.00291 at 2.4576B and 0.00208 at 4.9152B). Past that point, larger budgets preferred lower LRs. Hyperball's optimal LR fell slowly and steadily across its whole range (0.0137 at 153.6M to 0.0108 at 1.2288B, about ×0.94 per doubling). Because the AdamW trend reversed, extrapolating from small budgets was inaccurate. The rule from (a) overpredicted the 2.4576B optimum by 51%, and the all-six fit predicted an LR 79% above the 4.9152B optimum. The fit on the three largest budgets, the ones closest to the target, came within 7%. Trends can change with scale, so far-out predictions need source points at larger budgets near the target, and a power law should only be trusted a short distance past the budgets it was fit on. Hyperball's optimum moved more regularly, but we tested only one 2× extrapolation. AdamW also passed a 2× extrapolation before its trend broke, so three small budgets cannot rule out a later bend for Hyperball.
+
