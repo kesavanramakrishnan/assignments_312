@@ -50,6 +50,36 @@ RESCALE_JOBS = [
      "measure": {"run": "adamw", "step": FINAL_STEP, **FINAL, "tensors": []}},
 ]
 
+# Part (b): function-preserving rescalings of the final checkpoint. Scaling a parameter
+# `a` by c and its partner `b` by 1/c leaves the predictions unchanged (RMSNorm erases the
+# scale of whatever feeds it, and linear maps compose), but H_aa scales by 1/c^2 and H_bb by c^2.
+L = range(8)
+
+
+def _rescale(label, scale, tensors):
+    return {"name": f"b-rescale-{label}",
+            "measure": {"run": "adamw", "step": FINAL_STEP, **FINAL, "scale": scale,
+                        "tensors": tensors}}
+
+
+def _layers(part, factor):
+    return {f"model.layers.{i}.{part}": factor for i in L}
+
+
+for _label, _c in (("head-x0.25", 0.25), ("head-x0.5", 0.5), ("head-x4", 4.0)):
+    # logits = lm_head(norm(x)): lm_head * c and final-norm gain / c
+    RESCALE_JOBS.append(_rescale(_label, {"lm_head.weight": _c, "model.norm.weight": 1 / _c},
+                                 ["lm_head.weight", "model.norm.weight"]))
+RESCALE_JOBS.append(_rescale(
+    "mlp-x0.25", {**_layers("mlp.up_proj.weight", 0.25), **_layers("mlp.down_proj.weight", 4.0)},
+    ["model.layers.3.mlp.up_proj.weight", "model.layers.3.mlp.down_proj.weight"]))
+RESCALE_JOBS.append(_rescale(
+    "vo-x0.25", {**_layers("self_attn.v_proj.weight", 0.25), **_layers("self_attn.o_proj.weight", 4.0)},
+    ["model.layers.3.self_attn.v_proj.weight", "model.layers.3.self_attn.o_proj.weight"]))
+RESCALE_JOBS.append(_rescale(
+    "qk-x0.25", {**_layers("self_attn.q_proj.weight", 0.25), **_layers("self_attn.k_proj.weight", 0.25)},
+    ["model.layers.3.self_attn.q_proj.weight", "model.layers.3.self_attn.k_proj.weight"]))
+
 # Part (b): training changes. A run takes about 11 minutes on an H200 (a little more on
 # an H100); measuring its final checkpoint about 12.
 RUNS = [

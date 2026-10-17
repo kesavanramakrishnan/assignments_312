@@ -77,6 +77,8 @@ def minibatch(batch_size=64, **changes):
 # Part (a): full-batch training.
 FULL_BATCH_RUNS = [
     full_batch(32, 1500, learning_rate=0.01),  # (a) i: the clean case
+    full_batch(32, 1500, learning_rate=0.01, lr_schedule="step750x0.5"),  # (a) ii: halve eta
+    full_batch(32, 1500, learning_rate=0.01, lr_schedule="step750x2"),    # (a) ii: double eta
 ]
 
 # Part (b): minibatch training.
@@ -84,7 +86,19 @@ MINIBATCH_RUNS = [
     minibatch(),  # (b): the base recipe
 ]
 
-RUNS = FULL_BATCH_RUNS + MINIBATCH_RUNS
+# Part (c): 18 one-factor-at-a-time changes to the base recipe (lr 3e-3, batch 64,
+# beta1 .9, beta2 .95, wd .1, clip 1, warmup 3.125%). The preconditioned threshold
+# 2(1+beta1)/(1-beta1) moves with beta1, so beta1 is varied alongside LR, batch size and beta2.
+EXPLORE_RUNS = (
+    [minibatch(learning_rate=lr) for lr in (1e-3, 1.5e-3, 6e-3, 1e-2)]
+    + [minibatch(batch_size=b) for b in (16, 32, 128, 256)]
+    + [minibatch(beta2=b) for b in (0.9, 0.99, 0.999)]
+    + [minibatch(beta1=b) for b in (0.0, 0.8, 0.95)]
+    + [minibatch(weight_decay=w) for w in (0.0, 1.0)]
+    + [minibatch(grad_norm=None), minibatch(warmup_percent=0.1)]
+)
+
+RUNS = FULL_BATCH_RUNS + MINIBATCH_RUNS + EXPLORE_RUNS
 
 
 # TODO: Part (a) ii: halve and double the learning rate mid-run
