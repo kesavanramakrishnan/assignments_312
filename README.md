@@ -1,6 +1,7 @@
-# CS312 Deep Learning Alchemy — Assignment 2
+# CS312 Deep Learning Alchemy
 
-Start with the [Assignment 2 handout](worksheets/hparam_invariants/assignment2.pdf)
+Assignment 3 starters: [experiments/a3_optimization](experiments/a3_optimization/README.md).
+Assignment 2 (done): [handout](worksheets/hparam_invariants/assignment2.pdf)
 and [A2 runtime guide](experiments/a2/README.md). If you completed A1, reuse your
 Modal environment and W&B secret, and copy your personal settings into `utils.py`.
 The 78 supplied source runs are bundled; analyze them before launching new runs.
@@ -14,6 +15,17 @@ For the model, data, optimizer, loss, and checkpointing details, read
 
 For running on your own CUDA GPU or a non-course Slurm cluster without Modal, read
 [gpu/README.md](gpu/README.md).
+
+For using Modal in your own workspace without access to the course's shared data,
+read [README_MODAL_OWN_WORKSPACE.md](README_MODAL_OWN_WORKSPACE.md).
+
+Course handouts are distributed separately.
+
+The default-run and LR-tuning examples below cover setup and the experiment
+workflow. Assignment 3 starters and measurement tools are in
+[experiments/a3_optimization](experiments/a3_optimization/README.md). The
+assignment handout is distributed separately; solutions are not bundled.
+
 
 ## 0. Setting up Modal
 
