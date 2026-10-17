@@ -53,7 +53,7 @@ RESCALE_JOBS = [
 # Part (b): training changes. A run takes about 11 minutes on an H200 (a little more on
 # an H100); measuring its final checkpoint about 12.
 RUNS = [
-    # TrainConfig(<setting>=<value>, wandb_tags=(EXPERIMENT_KEY,)),
+    # TrainConfig(<setting>=<value>, wandb_tags=("a3", EXPERIMENT_KEY)),
 ]
 
 FINAL_JOBS = [

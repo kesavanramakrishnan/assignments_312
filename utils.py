@@ -15,7 +15,7 @@ from model_config import validate_precision
 REPO_ROOT = Path(__file__).resolve().parent
 
 # Student-facing configuration. Most students only edit these three lines.
-CONFIG_MODAL_ENVIRONMENT = "main"
+CONFIG_MODAL_ENVIRONMENT = "cs312-kesavanr"
 CONFIG_WANDB_ENTITY = "kesavanramakrishnan"
 CONFIG_WANDB_PROJECT = "cs312-assignments"
 

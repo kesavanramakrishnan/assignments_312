@@ -9,11 +9,11 @@ from train import TrainConfig
 
 EXPERIMENT_KEY = "a3-river-valley"
 # Each run logs val_ema{decay}_loss next to val_loss at every evaluation.
-EMA_DECAYS = (0.99, 0.999)
+EMA_DECAYS = (0.9, 0.99, 0.999, 0.9995)
 
 # Parts (a) and (b): one run per schedule, with evaluation-only EMAs.
 SCHEDULE_RUNS = [
-    TrainConfig(lr_schedule=lr_schedule, ema_decays=EMA_DECAYS, wandb_tags=(EXPERIMENT_KEY,))
+    TrainConfig(lr_schedule=lr_schedule, ema_decays=EMA_DECAYS, wandb_tags=("a3", EXPERIMENT_KEY))
     for lr_schedule in (
         "wsd0.0",  # constant after warmup
         "linear",
@@ -25,15 +25,15 @@ SCHEDULE_RUNS = [
 # Part (c): the LR falls to 0.1x between 40% and 45% of training and is back at
 # full LR by 50%, before the same 20% cooldown as the wsd0.2 control above.
 REWARM_RUNS = [
-    TrainConfig(lr_schedule="wsd0.2", lr_dip=(0.4, 0.45, 0.5, 0.1), wandb_tags=(EXPERIMENT_KEY,)),
+    TrainConfig(lr_schedule="wsd0.2", lr_dip=(0.4, 0.45, 0.5, 0.1), wandb_tags=("a3", EXPERIMENT_KEY)),
 ]
 
 # Part (d): horizon-free schedules. warmup_steps fixes the warmup in updates,
 # so it does not depend on the budget; sgdrT restarts every T updates.
 HORIZON_FREE_RUNS = [
-    TrainConfig(lr_schedule="invsqrt", warmup_steps=94, wandb_tags=(EXPERIMENT_KEY,)),
+    TrainConfig(lr_schedule="invsqrt", warmup_steps=94, wandb_tags=("a3", EXPERIMENT_KEY)),
     TrainConfig(lr_schedule="sgdr2000", warmup_steps=94, min_lr_ratio=0.1,
-                wandb_tags=(EXPERIMENT_KEY,)),
+                wandb_tags=("a3", EXPERIMENT_KEY)),
 ]
 
 RUNS = SCHEDULE_RUNS + REWARM_RUNS + HORIZON_FREE_RUNS

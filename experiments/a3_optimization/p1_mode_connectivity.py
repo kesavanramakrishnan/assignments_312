@@ -23,7 +23,7 @@ RESULTS_PATH = Path(__file__).resolve().parent / "results" / f"{EXPERIMENT_KEY}.
 
 # Constant LR after warmup. The schedule (and so the warmup) is set by the full
 # 600M-token run length; stop_at_step only ends training early.
-BASE = TrainConfig(lr_schedule="wsd0.0", wandb_tags=(EXPERIMENT_KEY,))
+BASE = TrainConfig(lr_schedule="wsd0.0", wandb_tags=("a3", EXPERIMENT_KEY))
 
 
 

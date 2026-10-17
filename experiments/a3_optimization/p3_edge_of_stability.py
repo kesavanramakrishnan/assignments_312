@@ -38,7 +38,7 @@ def full_batch(num_sequences, updates, every=25, **changes):
         num_evals=10,
         metric_loggers=TrainConfig.metric_loggers
         + (MetricLogger(AFTER_BACKWARD, SharpnessLogger(every=every)),),
-        wandb_tags=(EXPERIMENT_KEY,),
+        wandb_tags=("a3", EXPERIMENT_KEY),
     )
     settings.update(changes)
     return TrainConfig(**settings)
@@ -68,7 +68,7 @@ def minibatch(batch_size=64, **changes):
         metric_loggers=TrainConfig.metric_loggers
         + (MetricLogger(AFTER_BACKWARD, SharpnessLogger(
             steps=measurement_steps(batch_size), probe="heldout", kinds=("pre",))),),
-        wandb_tags=(EXPERIMENT_KEY,),
+        wandb_tags=("a3", EXPERIMENT_KEY),
     )
     settings.update(changes)
     return TrainConfig(**settings)
