@@ -10,7 +10,7 @@ from experiments.a2.modal_launcher import config, launch_training_jobs
 TOKENS = 614_400_000
 MAX_PARALLEL_RUNS = 10
 WANDB_PROJECT = 'kesavanramakrishnan/cs312-assignments'
-PART_KEYS = {'a': 'a2-p32a', 'b': 'a2-p32b', 'c': 'a2-p32c'}
+PART_KEYS = {'a': 'a2-p32a', 'b': 'a2-p32b', 'c': 'a2-p32c', 'bt': 'a2-p32b-pred', 'ct': 'a2-p32c-retune'}
 
 # B=64 at {.0015, .003, .006} is supplied as P1a, so only smaller batches are new.
 PART_A_GRID = {
@@ -35,9 +35,18 @@ TARGET_BATCHES = (128, 256)
 TARGET_LRS = (.0015, .003, .006)
 TARGET_WDS = (.4, .8, 1.6, 3.2)
 
+# Predictions recorded in notes/a2/p3 before any B=128/256 result was inspected, from power laws fitted on B<=64:
+# (i) WD .1 with the optimal LR scaled, (ii) LR .0015 with the optimal WD scaled.
+PREDICTED_CONFIGS = {
+    128: ((.00537, .1), (.0015, .887)),
+    256: ((.00783, .1), (.0015, 1.70)),
+}
+
 # Momentum ablation around each batch's best measured (a)/(b) pair, which already has beta1=.9.
 MOMENTUM_BATCHES = (8, 256)
 MOMENTUM_BETA1S = (0., .5, .8, .95, .98)
+# The beta1=0 control inherits an LR tuned at beta1=.9, so retune it at half and double that LR.
+RETUNE_LR_FACTORS = (.5, 2.)
 SOURCE_POLL_SECONDS = 300
 
 
@@ -79,6 +88,10 @@ def best_measured_pair(runs, batch):
     return best.config['learning_rate'], best.config['weight_decay']
 
 
+def part_b_predicted():
+    return [run('bt', batch, lr, wd) for batch, pairs in PREDICTED_CONFIGS.items() for lr, wd in pairs]
+
+
 def part_c():
     runs = finished_source_runs()
     configs = []
@@ -89,7 +102,16 @@ def part_c():
     return configs
 
 
-PARTS = {'a': part_a, 'b': part_b, 'c': part_c}
+def part_c_retune():
+    runs = finished_source_runs()
+    configs = []
+    for batch in MOMENTUM_BATCHES:
+        lr, wd = best_measured_pair(runs, batch)
+        configs += [run('ct', batch, lr * k, wd, beta1=0.) for k in RETUNE_LR_FACTORS]
+    return configs
+
+
+PARTS = {'a': part_a, 'b': part_b, 'bt': part_b_predicted, 'c': part_c, 'ct': part_c_retune}
 
 
 def main(argv=None):

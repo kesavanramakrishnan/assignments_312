@@ -2,6 +2,7 @@
 from collections import defaultdict
 from pathlib import Path
 
+from scripts import _figstyle  # noqa: F401
 import matplotlib
 
 matplotlib.use("Agg")
