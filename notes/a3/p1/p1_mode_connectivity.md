@@ -78,7 +78,7 @@ Setup: d8, 614M-token schedule, constant LR after warmup, AdamW. Prefix of x ste
 - **x = 0, y = 100 (B = −0.016):** after only 100 steps from the same initialization the line between the runs is flat or slightly better than the endpoints.
 - **x = 50, y = 250 and x = 100, y = 500 (B = +0.006, +0.028):** near the boundary the curve is almost flat with a small bump at α = 0.5.
 - **x = 250, y = 500 and x = 1000, y = 500 (B = −0.055, −0.087):** a clear dip with the minimum at α = 0.5 and a roughly quadratic shape, as expected inside one basin. At x = 1000 the midpoint (3.293) is below the ensemble (3.302).
-- **Midpoint versus ensemble:** the ensemble is the lower bound on the loss that averaging at the midpoint can give in the cells with a barrier, and it matches or is within about 0.01 of the midpoint where the curve dips. The curve's minimum is not always at α = 0.5: at (0, 100) and (50, 250) the α = 0.25 and 0.75 points are lower than the midpoint.
+- **Midpoint versus ensemble:** the ensemble is better than the midpoint where there is a barrier or the curve is flat (x = 0 and the small-x cells), and the midpoint is better where the curve dips (x ≥ 250 with short branches, and x = 1000). Averaging weights cannot beat the ensemble inside the failing cells, but in a shared basin it can match or exceed it at one forward pass instead of two. The curve's minimum is not always at α = 0.5: at (0, 100) and (50, 250) the α = 0.25 and 0.75 points are lower than the midpoint.
 
 ## (d) What controls whether runs share a basin
 
