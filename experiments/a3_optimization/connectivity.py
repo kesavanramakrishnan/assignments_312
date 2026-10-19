@@ -133,7 +133,7 @@ VOLUME_RESULTS = "results/a3-mode-connectivity"  # relative to the root of your 
 def _measure_pairs_to_volume(pairs, kwargs, name):
     """Like _measure_pairs_remote, but writes the rows to <volume>/results/.../<name>.json."""
     rows = _measure_pairs_remote.get_raw_f()(pairs, kwargs)
-    path = MODAL_DATA_DIR / VOLUME_RESULTS / f"{name}.json"
+    path = Path(str(MODAL_DATA_DIR / VOLUME_RESULTS)) / f"{name}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(rows, indent=2) + "\n")
     user_volume.commit()
