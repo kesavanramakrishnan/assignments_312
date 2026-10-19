@@ -92,17 +92,66 @@ def check_prefix_checkpoints(prefix=PREFIX):
         )
 
 
-# TODO: For part (d), vary the training choices by building prefix_for(base)
-# and branch(x, seed, base=base) from other base configs.
+# Part (d): one knob changed from BASE at a time, over a smaller grid of fork points.
+# Batch-size variants hold the warmup at BASE's 94 updates; "cos1000" decays to zero at
+# update 1000 (num_train_sequences=64,000), so the branches from x = 500 are fully annealed.
+D_PREFIX_STEPS = (0, 50, 100, 500)
+D_TAGS = ("a3", EXPERIMENT_KEY, "a3-p1d")
+VARIANTS = {
+    "lr1e-3": replace(BASE, learning_rate=1e-3, wandb_tags=D_TAGS),
+    "lr6e-3": replace(BASE, learning_rate=6e-3, wandb_tags=D_TAGS),
+    "bs16": replace(BASE, batch_size=16, warmup_steps=94, wandb_tags=D_TAGS),
+    "bs128": replace(BASE, batch_size=128, num_micro_batches=2, warmup_steps=94, wandb_tags=D_TAGS),
+    "cos1000": replace(BASE, lr_schedule="cos", num_train_sequences=64_000, warmup_steps=94,
+                       wandb_tags=D_TAGS),
+}
+
+
+def variant_branches(base):
+    return [branch(x, seed, base=base) for x in D_PREFIX_STEPS for seed in BRANCH_ORDER_SEEDS]
+
+
+def variant_pairs(base):
+    cells = []
+    for x in D_PREFIX_STEPS:
+        a, b = (branch(x, seed, base=base) for seed in BRANCH_ORDER_SEEDS)
+        for y in BRANCH_STEPS:
+            cells.append(((training_run_name(a), x + y), (training_run_name(b), x + y)))
+    return cells
+
+
+def variant_results_path(name):
+    return RESULTS_PATH.with_name(f"{EXPERIMENT_KEY}-d-{name}.json")
+
+
 # TODO: Plot endpoint, ensemble, and weight-averaged losses and the barrier
 # B(x, y) from RESULTS_PATH.
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("prefix", "branches", "measure"))
+    parser.add_argument("stage", choices=("prefix", "branches", "measure", "d-prefix", "d-branches", "d-measure"))
     args = parser.parse_args()
-    if args.stage == "prefix":
+    if args.stage == "d-prefix":
+        from modal_train import launch_training_jobs
+
+        launch_training_jobs([prefix_for(base) for base in VARIANTS.values()])
+    elif args.stage == "d-branches":
+        from modal_train import launch_training_jobs
+
+        for base in VARIANTS.values():
+            check_prefix_checkpoints(prefix_for(base))
+        launch_training_jobs([run for base in VARIANTS.values() for run in variant_branches(base)])
+    elif args.stage == "d-measure":
+        from experiments.a3_optimization.connectivity import measure_pairs_on_modal
+
+        for name, base in VARIANTS.items():
+            rows = measure_pairs_on_modal(variant_pairs(base))
+            path = variant_results_path(name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(rows, indent=2) + "\n")
+            print(f"Wrote {len(rows)} cells to {path}")
+    elif args.stage == "prefix":
         from modal_train import launch_training_jobs
 
         launch_training_jobs([PREFIX])
