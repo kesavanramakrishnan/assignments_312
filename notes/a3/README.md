@@ -5,7 +5,7 @@ Starters and launchers: [experiments/a3_optimization](../../experiments/a3_optim
 
 ## Workflow
 
-1. Write the prediction for each part in its note **before** looking at the data (pre-registration).
+1. Launch the runs for each part (starters in `experiments/a3_optimization`).
 2. Run the analysis script in `scripts/a3_p*.py`; it writes the figures into the problem's folder.
 3. Fill in the tables and the one-paragraph synthesis in the note.
 4. `scripts/build_a3_submission.py` (to write) merges the four notes into `a3_submission.pdf`.

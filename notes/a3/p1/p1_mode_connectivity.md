@@ -3,11 +3,6 @@
 Midpoint barrier B(θ₁, θ₂) = L((θ₁+θ₂)/2) − (L(θ₁)+L(θ₂))/2; weight averaging works when B ≤ 0.01.
 Setup: d8, 614M-token schedule, constant LR after warmup, AdamW. Prefix of x steps, two branches (batch-order seeds 1, 2) of 500 more steps; x ∈ {0, 50, 100, 250, 500, 1000}, y ∈ {25, 50, 100, 250, 500}.
 
-## Predictions (written before looking at the data)
-
-- B(x, y) as a function of x and y:
-- Where the ensemble beats the endpoints and by how much:
-
 ## (a) Endpoint and ensemble losses
 
 ![Mean endpoint loss, 0.5/0.5 prediction-ensemble loss and ensemble gain over the (x, y) grid](p1a_endpoint_ensemble.png)
@@ -72,7 +67,6 @@ Setup: d8, 614M-token schedule, constant LR after warmup, AdamW. Prefix of x ste
 | 100 | 500 | 3.6636 | 3.6553 | 3.6875 | 3.6507 | 3.6548 | 3.5624 |
 | 250 | 500 | 3.5736 | 3.5247 | 3.5163 | 3.5215 | 3.5698 | 3.4820 |
 | 1000 | 500 | 3.3790 | 3.3127 | 3.2930 | 3.3133 | 3.3813 | 3.3016 |
-
 
 - **x = 0, y = 500 (B = +0.622):** a clear barrier. The loss rises from 3.75 at the endpoints to 4.36 at α = 0.5, so the two runs are in different basins. Their ensemble (3.64) is still better than either endpoint.
 - **x = 0, y = 100 (B = −0.016):** after only 100 steps from the same initialization the line between the runs is flat or slightly better than the endpoints.
