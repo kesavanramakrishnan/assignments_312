@@ -76,6 +76,27 @@ Setup: d8, 614M-token schedule, constant LR after warmup, AdamW. Prefix of x ste
 
 ## (d) What controls whether runs share a basin
 
-Pending: variants over learning rate, batch size and schedule have not been run yet.
+One knob changed at a time from the baseline (LR 3e-3, batch 64, constant LR after warmup), on a smaller grid x ∈ {0, 50, 100, 500}, y ∈ {25, 50, 100, 250, 500} (two branches per cell, 40 extra branch runs). Batch-size variants keep the 94-update warmup of the baseline; the cosine variant decays to zero at update 1,000, so the branches from x = 500 are fully annealed.
+
+![Midpoint barrier heatmaps for the baseline and the five variants; boxed: B ≤ 0.01](p1d_barrier_variants.png)
+
+![Interpolation curves (loss minus mean endpoint loss) at three cells for each variant](p1d_interpolation.png)
+
+| Variant | B(0, 500) | B(100, 500) | B(500, 500) | cells with B > 0.01 | most negative B | ensemble gain (x = 500, y = 500) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline (LR 3e-3, B 64, constant) | +0.622 | +0.028 | -0.079 | 4 [(0, 250), (0, 500), (50, 500), (100, 500)] | -0.108 | 0.083 |
+| LR 1e-3 | +0.219 | -0.022 | -0.064 | 3 [(0, 250), (0, 500), (50, 500)] | -0.078 | 0.071 |
+| LR 6e-3 | +1.137 | +0.127 | -0.080 | 6 [(0, 100), (0, 250), (0, 500), (50, 250), (50, 500), (100, 500)] | -0.114 | 0.087 |
+| batch size 16 | +0.628 | +0.015 | -0.105 | 4 [(0, 250), (0, 500), (50, 500), (100, 500)] | -0.132 | 0.109 |
+| batch size 128 | +0.495 | +0.030 | -0.072 | 4 [(0, 250), (0, 500), (50, 500), (100, 500)] | -0.092 | 0.079 |
+| cosine over 1,000 updates | +0.570 | +0.054 | -0.009 | 4 [(0, 250), (0, 500), (50, 500), (100, 500)] | -0.111 | 0.018 |
+
+- **Learning rate is the strongest control.** The barrier at (0, 500) is 0.22 at LR 1e-3, 0.62 at 3e-3 and 1.14 at 6e-3, and the region that fails the B ≤ 0.01 test grows with LR: 3 cells at 1e-3 (all with x ≤ 50), 4 at 3e-3, 6 at 6e-3, including (0, 100) and (50, 250), which pass at the baseline. At 1e-3 even the (100, 500) cell passes (−0.022). A larger LR lets two runs drift further apart in the same time, so they need a longer shared prefix to stay in one basin.
+- **Batch size barely changes where averaging fails.** The failing cells are exactly the baseline's at batch 16 and 128 and the barrier at (0, 500) moves only from 0.63 (B = 16) to 0.62 (64) to 0.50 (128). Batch size does change how much averaging helps inside the basin: the most negative barrier is −0.13 at batch 16 and −0.09 at 128, and the ensemble gain at (500, 500) is 0.109 against 0.079, so the noisier small-batch iterates have more to average out.
+- **Annealing removes the benefit of averaging, not the basin.** With the cosine schedule the x = 500 cells have decayed LR, and B(500, 500) is −0.009 with an ensemble gain of 0.018, against −0.079 and 0.083 at constant LR. The runs agree (no barrier), but there is almost no oscillation left to average away. The cells with x ≤ 100, where the LR is still high, behave like the baseline (the same 4 cells fail).
+- **Pattern.** Whether two runs are averageable is set by how far noise at the current LR moves them apart (large LR, long branch) against how much of the trajectory they share (large x). Their gain from averaging, when it works, is set by the oscillation amplitude: larger with high LR and small batches, near zero once the LR has decayed. This matches the river-valley picture: averaging cancels the motion across the valley, and it only fails when the runs have chosen different valleys.
+- **Experiments that would test this.** (i) Decay both branches of a failing cell to zero LR before averaging, to see whether the barrier is oscillation across a shared valley or a different basin. (ii) A finer LR grid at x = 50 and 100, to check whether the failure boundary moves as y ∝ x/LR. (iii) More branch pairs per cell, since each cell here has a single pair and B has seed noise of about 0.01. (iv) Vary the data-order seed against the initialization seed at x = 0, to separate the two sources of divergence.
 
 ## Synthesis
+
+Two runs forked from the same checkpoint behave like one run for the loss at the endpoints (it depends only on x + y), and a 0.5/0.5 prediction ensemble always improves on them by 0.05–0.11. Averaging weights works (B ≤ 0.01) in 26 of the 30 baseline cells and usually beats both endpoints, with the average better than the ensemble when the shared prefix is long. It fails only when two runs have trained apart for a long time from a short prefix (no shared steps with y ≥ 250, or y ≥ 5x), where the barrier reaches 0.6. Raising the LR extends that failure region and a longer shared prefix shrinks it, while batch size does not move it and an annealed LR removes the gain from averaging. The pattern is consistent with a basin that is established early and a river-valley oscillation that averaging cancels.

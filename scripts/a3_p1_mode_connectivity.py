@@ -42,10 +42,10 @@ def grid(cells, key):
     return np.array([[cells[(x, y)][key] for y in Y_VALUES] for x in X_VALUES])
 
 
-def heatmap(ax, values, title, fmt, cmap, norm=None, mark=None):
+def heatmap(ax, values, title, fmt, cmap, norm=None, mark=None, ylabels=X_VALUES):
     image = ax.imshow(values, cmap=cmap, norm=norm, aspect="auto")
     ax.set_xticks(range(len(Y_VALUES)), Y_VALUES)
-    ax.set_yticks(range(len(X_VALUES)), X_VALUES)
+    ax.set_yticks(range(len(ylabels)), ylabels)
     ax.set_xlabel("branch steps y")
     ax.set_ylabel("shared prefix steps x")
     ax.set_title(title)
@@ -136,7 +136,69 @@ def print_tables(cells):
         print(f"| {key[0]} | {key[1]} | " + " | ".join(f"{v:.4f}" for v in c["interpolation"]) + f" | {c['ensemble']:.4f} |")
 
 
+D_X_VALUES = (0, 50, 100, 500)
+VARIANT_LABELS = {"baseline": "baseline (LR 3e-3, B 64, constant)", "lr1e-3": "LR 1e-3", "lr6e-3": "LR 6e-3",
+                  "bs16": "batch size 16", "bs128": "batch size 128", "cos1000": "cosine over 1,000 updates"}
+
+
+def load_variant(name):
+    if name == "baseline":
+        return {k: v for k, v in load().items() if k[0] in D_X_VALUES}
+    path = RESULTS.with_name(f"a3-mode-connectivity-d-{name}.json")
+    cells = {}
+    for row in json.loads(path.read_text()):
+        match = re.search(r"fork(\d+)", row["run_a"])
+        x = int(match.group(1)) if match else 0
+        losses = row["interpolation"]
+        mean_endpoint = (losses[0] + losses[-1]) / 2
+        cells[(x, row["step_a"] - x)] = dict(mean_endpoint=mean_endpoint, midpoint=losses[2], ensemble=row["ensemble"],
+                                              interpolation=losses, alphas=row["alphas"],
+                                              barrier=losses[2] - mean_endpoint)
+    return cells
+
+
+def plot_variants():
+    variants = {name: load_variant(name) for name in VARIANT_LABELS}
+    fig, axes = plt.subplots(2, 3, figsize=(12, 6.4))
+    norm = TwoSlopeNorm(vcenter=0, vmin=-0.12, vmax=0.5)
+    for ax, (name, cells) in zip(axes.flat, variants.items()):
+        values = np.array([[cells[(x, y)]["barrier"] for y in Y_VALUES] for x in D_X_VALUES])
+        heatmap(ax, values, VARIANT_LABELS[name], ".2f", "RdBu_r", norm, mark=values <= THRESHOLD, ylabels=D_X_VALUES)
+    fig.suptitle("Midpoint barrier B(x, y); boxed: B ≤ 0.01")
+    fig.savefig(OUTPUT_DIR / "p1d_barrier_variants.png", dpi=150)
+    plt.close(fig)
+
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3.6))
+    colors = dict(zip(VARIANT_LABELS, ("k", "C0", "C3", "C2", "C4", "C1")))
+    for ax, key in zip(axes, ((0, 500), (100, 500), (500, 500))):
+        for name, cells in variants.items():
+            cell = cells[key]
+            ax.plot(cell["alphas"], np.array(cell["interpolation"]) - cell["mean_endpoint"], "o-", ms=3,
+                    color=colors[name], label=VARIANT_LABELS[name] if key == (0, 500) else None)
+        ax.axhline(0, color="gray", lw=.8)
+        ax.set_title(f"x = {key[0]}, y = {key[1]}")
+        ax.set_xlabel("α")
+        ax.grid(alpha=.3)
+    axes[0].set_ylabel("loss − mean endpoint loss")
+    axes[0].legend(fontsize=7)
+    fig.savefig(OUTPUT_DIR / "p1d_interpolation.png", dpi=150)
+    plt.close(fig)
+
+    print("| Variant | B(0, 500) | B(100, 500) | B(500, 500) | cells with B > 0.01 | most negative B | ensemble gain (x = 500, y = 500) |")
+    print("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for name, cells in variants.items():
+        failing = sorted(k for k, v in cells.items() if v["barrier"] > THRESHOLD)
+        most = min(v["barrier"] for v in cells.values())
+        e = cells[(500, 500)]
+        print(f"| {VARIANT_LABELS[name]} | {cells[(0, 500)]['barrier']:+.3f} | {cells[(100, 500)]['barrier']:+.3f} | "
+              f"{cells[(500, 500)]['barrier']:+.3f} | {len(failing)} {failing} | {most:+.3f} | {e['mean_endpoint'] - e['ensemble']:.3f} |")
+
+
 def main():
+    if "--variants" in __import__("sys").argv:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        plot_variants()
+        return
     cells = load()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     plot_endpoint_ensemble(cells)
