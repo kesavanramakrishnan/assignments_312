@@ -130,7 +130,7 @@ def variant_results_path(name):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("prefix", "branches", "measure", "d-prefix", "d-branches", "d-measure"))
+    parser.add_argument("stage", choices=("prefix", "branches", "measure", "d-prefix", "d-branches", "d-measure", "d-launch", "d-fetch"))
     args = parser.parse_args()
     if args.stage == "d-prefix":
         from modal_train import launch_training_jobs
@@ -142,6 +142,17 @@ def main():
         for base in VARIANTS.values():
             check_prefix_checkpoints(prefix_for(base))
         launch_training_jobs([run for base in VARIANTS.values() for run in variant_branches(base)])
+    elif args.stage == "d-launch":
+        from experiments.a3_optimization.connectivity import launch_pairs_detached
+
+        ids = launch_pairs_detached([(f"d-{name}", variant_pairs(base)) for name, base in VARIANTS.items()])
+        print("launched", dict(zip(VARIANTS, ids)))
+    elif args.stage == "d-fetch":
+        from experiments.a3_optimization.connectivity import fetch_pairs
+
+        for name in VARIANTS:
+            ok = fetch_pairs(f"d-{name}", variant_results_path(name))
+            print(("fetched " if ok else "pending ") + name)
     elif args.stage == "d-measure":
         from experiments.a3_optimization.connectivity import measure_pairs_on_modal
 

@@ -40,6 +40,16 @@ LOOK_JOBS = [
     for step in CHECKPOINTS
 ]
 
+# Part (a), block structure baseline: the same block sizes, but each block a random subset of
+# the coordinates. Compared with the real family/layer energies, it shows how much of ||H||_F^2
+# sits in the blocks because of structure rather than because blocks are big.
+LOOK_JOBS += [
+    {"name": f"a-random-{step}",
+     "measure": {"run": "adamw", "step": step, "extremes": False, "families": False,
+                 "energy_random": ("family", "layer")}}
+    for step in CHECKPOINTS
+]
+
 # Part (b): hand rescaling of the shipped final checkpoint (no training). `scale`
 # multiplies named parameters by constants before measuring; `tensors` reports the top
 # eigenvalue of each named tensor's own block, with its RMS and gradient norm.

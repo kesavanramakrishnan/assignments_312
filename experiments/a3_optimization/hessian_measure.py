@@ -47,7 +47,7 @@ from utils import create_batches
 
 
 def measure(model, *, probe=None, extremes=True, top_k=5, families=True, tensors=(),
-            density_runs=0, energy=(), energy_probes=4, hutchinson_probes=0, lanczos_steps=48, bottom_steps=96,
+            density_runs=0, energy=(), energy_random=(), energy_probes=4, hutchinson_probes=0, lanczos_steps=48, bottom_steps=96,
             block_steps=24, density_steps=96):
     """Measure the Hessian of the probe loss at the model's current weights.
 
@@ -112,6 +112,29 @@ def measure(model, *, probe=None, extremes=True, top_k=5, families=True, tensors
                 keys, E = hs.block_energy(H.hvp, H.size, hs.partition(H.names, H.sizes, label),
                                           device, probes=energy_probes)
                 out["energy"][part] = {"blocks": keys, "per_probe": E.tolist()}
+        if isinstance(energy_random, str):
+            energy_random = (energy_random,)
+        if energy_random:
+            # Same block sizes, but each block is a uniformly random subset of the coordinates:
+            # work in coordinates permuted by a fixed random permutation and cut contiguous blocks.
+            perm = torch.randperm(H.size, generator=torch.Generator().manual_seed(7)).to(device)
+
+            def permuted_hvp(v):
+                u = torch.empty_like(v)
+                u[perm] = v
+                return H.hvp(u)[perm]
+
+            out["energy_random"] = {}
+            for part in energy_random:
+                label = {"family": hs.family_of, "layer": hs.layer_of}[part]
+                real = hs.partition(H.names, H.sizes, label)
+                blocks, offset = {}, 0
+                for key, ranges in real.items():
+                    n = hs.block_size(ranges)
+                    blocks[key] = [(offset, offset + n)]
+                    offset += n
+                keys, E = hs.block_energy(permuted_hvp, H.size, blocks, device, probes=energy_probes)
+                out["energy_random"][part] = {"blocks": keys, "per_probe": E.tolist()}
         if hutchinson_probes:
             out["hutchinson"] = hs.hutchinson(H.hvp, H.size, device, probes=hutchinson_probes)
     out["seconds"] = time.time() - t0

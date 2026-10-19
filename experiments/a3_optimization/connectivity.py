@@ -14,11 +14,13 @@ from types import SimpleNamespace
 import modal
 
 from modal_utils import (
+    MODAL_DATA_DIR,
     MODAL_ENVIRONMENT,
     MODAL_MODEL_DIR,
     VOLUME_MOUNTS,
     build_image,
     timestamped_modal_app_name,
+    user_volume,
 )
 
 ALPHAS = (0.0, 0.25, 0.5, 0.75, 1.0)
@@ -122,3 +124,42 @@ def measure_pairs_on_modal(pairs, **kwargs):
             environment_name=MODAL_ENVIRONMENT,
         ):
             return _measure_pairs_remote.remote(pairs, kwargs)
+
+
+VOLUME_RESULTS = "results/a3-mode-connectivity"  # relative to the root of your Modal volume
+
+
+@app.function(image=build_image(), volumes=VOLUME_MOUNTS, gpu="H100", timeout=6 * 60 * 60)
+def _measure_pairs_to_volume(pairs, kwargs, name):
+    """Like _measure_pairs_remote, but writes the rows to <volume>/results/.../<name>.json."""
+    rows = _measure_pairs_remote.get_raw_f()(pairs, kwargs)
+    path = MODAL_DATA_DIR / VOLUME_RESULTS / f"{name}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rows, indent=2) + "\n")
+    user_volume.commit()
+    return str(path)
+
+
+def launch_pairs_detached(jobs, **kwargs):
+    """Spawn one measurement job per (name, pairs) on Modal and return immediately.
+
+    The jobs keep running if this process exits; read the results with fetch_pairs(name)."""
+    with modal.enable_output(), app.run(
+        name=timestamped_modal_app_name("dl-alchemy-a3-connectivity"),
+        environment_name=MODAL_ENVIRONMENT,
+        detach=True,
+    ):
+        return [_measure_pairs_to_volume.spawn(pairs, kwargs, name).object_id for name, pairs in jobs]
+
+
+def fetch_pairs(name, dest):
+    """Copy <name>.json from your Modal volume to `dest`; returns False if it is not there yet."""
+    from modal.exception import NotFoundError
+
+    try:
+        data = b"".join(user_volume.read_file(f"{VOLUME_RESULTS}/{name}.json"))
+    except (NotFoundError, FileNotFoundError):
+        return False
+    Path(dest).parent.mkdir(parents=True, exist_ok=True)
+    Path(dest).write_bytes(data)
+    return True
