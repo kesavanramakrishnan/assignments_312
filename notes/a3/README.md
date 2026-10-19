@@ -23,9 +23,13 @@ All training runs carry the W&B tags `a3` and the problem tag. Everything runs i
 
 ## Run status
 
-| Problem | Done | Still to run |
+All runs are finished and analyzed.
+
+| Problem | Runs | Analysis script |
 | --- | --- | --- |
-| P1 | prefix, 12 branches, measure stage (30 cells) | (d) variants: LR, batch size, schedule |
-| P2 | 7 baselines (4 schedules, 1 dip, invsqrt, SGDR); launched: 8 LR-tuning, 4 dip variants, 4 budget-tuned linear | none planned |
-| P3 | (a)i, (b); launched: (a)ii halve/double η, 18 exploration runs | none planned |
-| P4 | (a) 13 checkpoints, (c) three arms; launched: 6 rescalings | (b) training change, (c) variants |
+| P1 | baseline: prefix, 12 branches, 30-cell measurement; (d): 5 variants (LR 1e-3 and 6e-3, batch 16 and 128, cosine over 1,000 updates), each a prefix, 8 branches and a 20-cell measurement | `scripts/a3_p1_mode_connectivity.py` (`--variants` for part d) |
+| P2 | 7 baselines, 8 peak-LR runs, 4 dip variants, 4 budget-tuned linear runs | `scripts/a3_p2_river_valley.py` |
+| P3 | 3 full-batch runs, minibatch baseline, 18 exploration runs | `scripts/a3_p3_edge_of_stability.py` |
+| P4 | (a) 13 checkpoints plus 13 random-partition baselines; (b) 6 rescalings and 3 `head_init_scale` runs; (c) 10 subspace jobs | `scripts/a3_p4_hessian.py` |
+
+`scripts/build_a3_submission.py` merges the four notes into `a3_submission.pdf` (13 pages).
