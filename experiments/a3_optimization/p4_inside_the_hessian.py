@@ -82,8 +82,11 @@ RESCALE_JOBS.append(_rescale(
 
 # Part (b): training changes. A run takes about 11 minutes on an H200 (a little more on
 # an H100); measuring its final checkpoint about 12.
+# head_init_scale = c multiplies the output head at initialization by c and the final norm
+# gain by 1/c (function-preserving), starting training with a sharper (c < 1) or flatter
+# (c > 1) head block than the default recipe reaches by itself.
 RUNS = [
-    # TrainConfig(<setting>=<value>, wandb_tags=("a3", EXPERIMENT_KEY)),
+    TrainConfig(head_init_scale=c, wandb_tags=("a3", EXPERIMENT_KEY)) for c in (0.25, 0.0625, 4.0)
 ]
 
 FINAL_JOBS = [
@@ -103,6 +106,18 @@ SUBSPACE_JOBS = [
     for arm in ("full", "top", "removed")
 ]
 
+
+# Part (c) variants of the three arms: lower LR for the top-subspace arm, a larger LR for the
+# arm with the top subspace removed, different subspace sizes, and an earlier start.
+SUBSPACE_JOBS += [
+    {"name": "c-top-lr0.25", "continue": {**START, "transform": "top", "lr_scale": 0.25}},
+    {"name": "c-removed-lr2", "continue": {**START, "transform": "removed", "lr_scale": 2.0}},
+    {"name": "c-top-k3", "continue": {**START, "transform": "top", "k": 3}},
+    {"name": "c-top-k40", "continue": {**START, "transform": "top", "k": 40, "lanczos_steps": 100}},
+    {"name": "c-removed-k40", "continue": {**START, "transform": "removed", "k": 40, "lanczos_steps": 100}},
+    {"name": "c-top-start305", "continue": {**START, "transform": "top", "step": 305}},
+    {"name": "c-removed-start305", "continue": {**START, "transform": "removed", "step": 305}},
+]
 
 # TODO: Part (a): anything else you need, e.g. the baseline for the block-structure
 # question. H.hvp (hessian.ProbeHessian) applies H to any vector you construct.

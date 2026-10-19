@@ -59,6 +59,7 @@ class TrainConfig:
     model_builder: str | None = None
     model_builder_kwargs: dict = field(default_factory=dict)
     embedding_init_scale: float = 1.0
+    head_init_scale: float = 1.0
     run_name_suffix: str | None = None
     init_checkpoint_path: str | Path | None = None
     learning_rate: float = 3e-3
@@ -170,6 +171,8 @@ def training_run_name(config):
         run_name += f"-wd{config.weight_decay}"
     if config.embedding_init_scale != TrainConfig.embedding_init_scale:
         run_name += f"-emb{config.embedding_init_scale:g}"
+    if config.head_init_scale != TrainConfig.head_init_scale:
+        run_name += f"-head{config.head_init_scale:g}"
     if config.warmup_percent != TrainConfig.warmup_percent:
         run_name += f"-warmup{config.warmup_percent}"
     if config.grad_norm != TrainConfig.grad_norm:
@@ -282,6 +285,13 @@ def build_model(config, device):
     if config.embedding_init_scale != 1.0:
         with torch.no_grad():
             model.get_input_embeddings().weight.mul_(config.embedding_init_scale)
+    if config.head_init_scale != 1.0:
+        # Function-preserving at init: logits = lm_head(norm(x)), so scaling the head by c
+        # and the final norm gain by 1/c leaves the model unchanged but rescales the head's
+        # Hessian block by 1/c^2.
+        with torch.no_grad():
+            model.get_output_embeddings().weight.mul_(config.head_init_scale)
+            model.model.norm.weight.div_(config.head_init_scale)
     return model.to(device=device, dtype=dtype)
 
 
@@ -524,6 +534,8 @@ def checked_train_config(config):
         raise ValueError(
             f"embedding_init_scale must be positive, got {config.embedding_init_scale!r}."
         )
+    if not config.head_init_scale > 0:
+        raise ValueError(f"head_init_scale must be positive, got {config.head_init_scale!r}.")
     resolve_model_builder(config.model_builder)
     resolve_model_builder(config.optimizer_builder)
     if not isinstance(config.optimizer_kwargs, dict):
