@@ -8,9 +8,9 @@ Default d8, 614M tokens, AdamW. Regret R_M(t) = L(θ_t^M) − L(θ_t^ref), compa
 
 ![Final validation loss against peak LR for each schedule](p2a_peak_lr.png)
 
-- **Constant after warmup** keeps decreasing slowly but is 0.17 above the best run at the end (3.097 vs 2.926). Its gap to the decayed runs opens steadily: no decayed schedule is ahead early, but from about 100M tokens the constant curve flattens relative to them.
+- **Constant after warmup** keeps decreasing slowly but is 0.17 above the best run at the end (3.097 vs 2.926). Its gap to the decayed runs opens steadily from about 100M tokens, as the decayed schedules' LRs fall.
 - **Linear and cosine** are almost identical until about 150M tokens, then cosine is slightly lower (by up to 0.03 around 400M tokens) while its LR is lower; they converge near the end and linear finishes ahead (2.926 vs 2.934).
-- **Plateau + 20% decay** tracks the constant curve until the decay starts at about 490M tokens (80%), then drops 0.16 in the last 120M tokens and ends at 2.937, 0.011 above linear. The drop is almost entirely made in the decay phase, as the river-valley picture predicts: the high-LR plateau hides progress that annealing reveals.
+- **Plateau + 20% decay** tracks the constant curve until the decay starts at about 490M tokens (80%), then drops about 0.18 in the last 120M tokens and ends at 2.937, 0.011 above linear. The drop is almost entirely made in the decay phase, as the river-valley picture predicts: the high-LR plateau hides progress that annealing reveals.
 - **Peak LR.** 3e-3 is best for linear (2.926) and cosine (2.934). For plateau + decay 1.5e-3 and 3e-3 tie (2.9365 vs 2.9371), and 6e-3 is worse (2.966). Constant prefers the lower LR (3.058 at 1.5e-3, 3.097 at 3e-3, 3.184 at 6e-3): without annealing a larger LR leaves more oscillation.
 - **Reference for (b):** linear at 3e-3, the lowest final validation loss (2.9261).
 
@@ -37,7 +37,7 @@ Reference: linear lr=0.003, final 2.9261
 
 ![Regret against the reference for raw weights, EMA 0.999 and EMA 0.9995](p2b_regret.png)
 
-- **EMA helps a lot without a decay, and not at all with one.** For constant LR 3e-3 the final loss falls from 3.097 (raw) to 2.972 with EMA 0.999, which removes 0.125 of the 0.170 gap to the reference. At 1.5e-3 it falls from 3.058 to 2.962. For linear, cosine and plateau + decay the raw weights are already at the valley floor, and any EMA is equal or worse at the end (EMA 0.999 +0.004 to +0.009 worse, EMA 0.9995 +0.02 to +0.03 worse) because it averages in older, higher-loss iterates.
+- **EMA helps a lot without a decay, and not at all with one.** For constant LR 3e-3 the final loss falls from 3.097 (raw) to 2.972 with EMA 0.999, which removes 0.125 of the 0.170 gap to the reference. At 1.5e-3 it falls from 3.058 to 2.962. For linear, cosine and plateau + decay the raw weights are already at the valley floor, and any EMA is equal or worse at the end (EMA 0.999 is 0.003 to 0.009 worse, EMA 0.9995 is 0.02 to 0.04 worse) because it averages in older, higher-loss iterates.
 - **Timescale.** 0.999 (about 1,000 updates) is best for constant LR. 0.9 and 0.99 are too short to average out the oscillation (3.058 and 2.995 at 3e-3), and 0.9995 is too long: it lags the downward trend. The EMA is not bias-corrected, so the 0.999 and 0.9995 curves are far above the raw loss for the first 200M and 450M tokens (they still contain the initialization), and the regret there is meaningless.
 - **Mid-training.** Between about 200M and 450M tokens the EMA 0.999 of every schedule is below the reference's raw loss (regret down to −0.05): an EMA of a high-LR run estimates the annealed loss without annealing.
 - **What gap remains.** After EMA the constant run is still 0.046 above the reference (27% of the original gap), and EMA 0.9995 does worse (0.067). Averaging closes about three quarters of the gap between schedules, not all of it. The gap between the decayed schedules themselves (0.008–0.011) is unchanged by averaging.
