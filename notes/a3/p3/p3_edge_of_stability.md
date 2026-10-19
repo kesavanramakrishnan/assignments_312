@@ -23,7 +23,7 @@ Thresholds: SGD η·λ_max → 2; AdamW with β₁ = 0.9 and a frozen preconditi
 | η halved at 750 | 258 | 449 | 2.25 | 400 |
 | η doubled at 750 | 266 | 123 | 2.46 | 100 |
 
-- **Prediction before checking:** λ_max should follow 2/η_t: up to about 400 after halving, down to about 100 after doubling.
+- **Expected from the theory:** λ_max follows 2/η_t, up to about 400 after halving and down to about 100 after doubling.
 - **Both runs move to the new edge.** λ_max rises 1.7× after halving and falls to 0.46× after doubling, so η_t·λ_max ends at 2.25 and 2.46, close to the 2.5 of the clean case.
 - **The response is not symmetric.** Halving η drops η·λ_max to 1.3, below the edge, and sharpness has to rise again by progressive sharpening, which takes about 250 updates (λ_max reaches about 420 around update 1000). Doubling η pushes η·λ_max to 5, above the edge, and λ_max falls within about 100 updates (to about 150 by update 850) through self-stabilization, then keeps creeping down to 123. Reducing sharpness is much faster than raising it.
 
@@ -68,7 +68,7 @@ Median η_t·λ_max^pre over 100–190M tokens (about 60% of the run), one chang
 - **Learning rate has a weak, monotone effect.** A 10× larger LR raises η·λ_max^pre only 1.5× (19 to 29.5): sharpness falls as η rises (λ_max^pre scales roughly like η^-0.8), so the product moves little. The quantity is closer to constant than λ_max itself, which supports η·λ_max as the natural variable.
 - **β₂ has no effect** (21.6–22.4 over a 1,000× range in 1 − β₂), and so does warmup length.
 - **β₁ moves it up, but far less than the threshold.** The measured value grows 13.9, 19.2, 22.1, 26.7 for β₁ = 0, 0.8, 0.9, 0.95, while 2(1+β₁)/(1−β₁) grows 2, 18, 38, 78. The ratio to the threshold goes 6.9, 1.07, 0.58, 0.34: at β₁ = 0 the run is far above the quadratic threshold of 2 yet trains stably (the preconditioner and gradients are not frozen), and with large β₁ it sits well below. Momentum does raise the stable sharpness, as in the lecture's full-batch picture, but not by the full factor in the minibatch regime.
-- **Weight decay and clipping.** λ = 1 gives 39 but a much worse loss (3.507, so a different regime), and removing the gradient clip raises it to 29.8 because clipping reduces steps.
+- **Weight decay and clipping.** λ = 1 gives 39 but a much worse loss (3.507, so a different regime), and removing the gradient clip raises it to 29.8.
 - **What decides whether the run is at the edge.** The tendency to be near the threshold goes up with batch size, β₁ and LR, and goes down with noise (small batches). Even where it does reach 38 (B ≥ 128, λ = 1) it does not hold there.
 
 ## Synthesis
