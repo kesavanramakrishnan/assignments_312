@@ -31,6 +31,7 @@ def have(name):
 
 def style_token_axis(ax):
     ax.set_xscale("symlog", linthresh=1)
+    ax.set_xlim(left=0, right=800)
     ax.set_xlabel("training tokens (M)")
     ax.grid(alpha=.3)
 
@@ -110,21 +111,27 @@ def part_a_density():
         edges = np.linspace(lo - 0.02 * (hi - lo), hi + 0.02 * (hi - lo), 90)
         hist, edges = np.histogram(ritz, bins=edges, weights=weights)
         centers = (edges[1:] + edges[:-1]) / 2
-        ax.step(centers, np.maximum(hist / np.diff(edges), 1e-12), where="mid", color="C0")
+        density = np.where(hist > 0, hist / np.diff(edges), np.nan)
+        ax.plot(centers, density, "o", ms=2.5, color="C0")
+        ax.set_ylim(1e-10, 1e3)
         ax.axvline(0, color="gray", lw=.8)
         ax.set_yscale("log")
         ax.set_xlabel("eigenvalue")
         ax.set_title(f"{tokens_m(step):.0f}M tokens")
         ax.grid(alpha=.3)
-        negative = float(weights[ritz < 0].sum())
-        bulk_edge = float(np.quantile(np.repeat(ritz, 1), 0.99))
-        summary.append((tokens_m(step), r["lambda_min"], r["lambda_max"], negative, r["top"]["values"][:3]))
+        order = np.argsort(ritz)
+        cumulative = np.cumsum(weights[order])
+        total = cumulative[-1]
+        q = lambda p: float(ritz[order][np.searchsorted(cumulative / total, p)])
+        summary.append((tokens_m(step), r["lambda_min"], r["lambda_max"],
+                        float(weights[ritz < -0.01].sum() / total), float(weights[np.abs(ritz) <= 0.01].sum() / total),
+                        q(1 - 1e-4), q(1 - 1e-6), r["top"]["values"][:3]))
     axes[0].set_ylabel("spectral density (Lanczos quadrature)")
     fig.savefig(OUTPUT_DIR / "p4a_density.png", dpi=150)
     plt.close(fig)
-    print("| tokens | λ_min | λ_max | mass at negative Ritz values | top-3 eigenvalues |")
-    for t, lmin, lmax, neg, top in summary:
-        print(f"| {t:.0f}M | {lmin:.3f} | {lmax:.3f} | {neg:.4f} | {', '.join(f'{v:.3f}' for v in top)} |")
+    print("| tokens | λ_min | λ_max | mass at λ < −0.01 | mass at |λ| ≤ 0.01 | 1−10⁻⁴ quantile | 1−10⁻⁶ quantile | top-3 eigenvalues |")
+    for t, lmin, lmax, neg, near0, q4, q6, top in summary:
+        print(f"| {t:.0f}M | {lmin:.3f} | {lmax:.3f} | {neg:.2e} | {near0:.4f} | {q4:.3f} | {q6:.3f} | {', '.join(f'{v:.3f}' for v in top)} |")
     print()
 
 
