@@ -11,6 +11,7 @@ Default d8 AdamW run, 13 checkpoints from initialization to 614M tokens; all mea
 ![Top eigenvalue of each family block and of the whole model; tr(H_bb²)/size per family; tr(H²)/d, λ_max²/d and |λ_min| of the whole model, against tokens](p4a_family_spectrum.png)
 
 | tokens | λ_max | λ_min | tr(H²)/d | sharpest family (λ_max) | λ_max² / tr(H²) |
+| --- | ---: | ---: | ---: | ---: | ---: |
 | 0.0M | 1431.503 | -1410.061 | 8.18 | embedding (1414.298) | 0.007 |
 | 0.2M | 1571.742 | -601.660 | 4.43 | embedding (1553.920) | 0.016 |
 | 1.0M | 53.364 | -17.453 | 0.00388 | embedding (45.811) | 0.021 |
@@ -28,6 +29,7 @@ Default d8 AdamW run, 13 checkpoints from initialization to 614M tokens; all mea
 Top eigenvalue of each family's own block:
 
 | tokens | embedding | attention | qk_norm | mlp | norm | head |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 0.0M | 1414.298 | 9.879 | 0.007 | 7.011 | 0.020 | 0.102 |
 | 0.2M | 1553.920 | 11.032 | 0.008 | 10.397 | 0.022 | 1.389 |
 | 1.0M | 45.811 | 3.563 | 0.005 | 4.881 | 0.048 | 17.367 |
@@ -51,14 +53,15 @@ Top eigenvalue of each family's own block:
 
 ![Eigenvalue density (Lanczos quadrature, four runs) at initialization, 10M, 100M and 614M tokens, log scale](p4a_density.png)
 
-| tokens | λ_min | λ_max | mass at λ < −0.01 | mass at |λ| ≤ 0.01 | 1−10⁻⁴ quantile | 1−10⁻⁶ quantile | top-3 eigenvalues |
+| tokens | λ_min | λ_max | mass at λ < −0.01 | mass within ±0.01 of 0 | 99.99% quantile | 99.9999% quantile | top-3 eigenvalues |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 0M | -1410.061 | 1431.503 | 4.51e-03 | 0.0000 | 58.556 | 684.375 | 1431.503, 1307.342, 1250.305 |
 | 10M | -0.256 | 6.502 | 4.31e-04 | 0.9983 | 0.069 | 1.212 | 6.502, 6.095, 4.398 |
 | 100M | -0.064 | 2.195 | 2.70e-05 | 0.9998 | 0.013 | 0.305 | 2.195, 2.156, 1.692 |
 | 614M | -0.080 | 5.967 | 4.96e-05 | 0.9993 | 0.023 | 0.849 | 5.967, 4.289, 3.429 |
 
 - **The bulk is a spike at zero.** 99.8–99.98% of the spectral mass lies within |λ| ≤ 0.01 from 10M tokens onward, with a long, thin tail of positive eigenvalues out to a few. At initialization it is much wider and nearly symmetric (|λ| up to 1,400).
-- **There are outliers.** A handful of eigenvalues separate from the continuous part: at 614M the top eigenvalues are 5.97, 4.29, 3.43, against a 1 − 10⁻⁶ quantile of 0.85. The outliers are isolated spikes in the density, not a continuous tail.
+- **There are outliers.** A handful of eigenvalues separate from the continuous part: at 614M the top eigenvalues are 5.97, 4.29, 3.43, against a 99.9999% spectral quantile of 0.85. The outliers are isolated spikes in the density, not a continuous tail.
 - **There are negative eigenvalues, but they are small.** The most negative is −0.08 at 614M tokens (about 1.3% of λ_max), −0.26 at 10M and −0.06 at 100M, and the mass below −0.01 is only 3e-5 to 4e-4. At initialization it is large (−1,410) and symmetric with λ_max. So training mostly sits in a region with almost no negative curvature, which is the "saddles are not a problem" picture of lecture 1.
 - **Implications for training.** Almost all directions are flat (|λ| < 0.01), so a step in them changes the loss very little, and the loss is controlled by a few sharp directions: the learning rate is limited by the top few eigenvalues (about 6 at the end), while progress comes from the large flat bulk.
 
@@ -67,6 +70,7 @@ Top eigenvalue of each family's own block:
 ![Share of ‖H‖_F² inside blocks for family and layer partitions, against a random partition of the same sizes; block-pair energy at 614M tokens](p4a_block_structure.png)
 
 | tokens | family blocks: share inside | layer blocks: share inside | random family | random layer |
+| --- | ---: | ---: | ---: | ---: |
 | 0.0M | 0.968 | 0.969 | 0.474 | 0.105 |
 | 0.2M | 0.967 | 0.968 | 0.483 | 0.121 |
 | 1.0M | 0.950 | 0.948 | 0.592 | 0.319 |

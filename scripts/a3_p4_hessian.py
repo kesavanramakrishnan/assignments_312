@@ -85,6 +85,7 @@ def part_a_spectrum():
     plt.close(fig)
 
     print("| tokens | λ_max | λ_min | tr(H²)/d | sharpest family (λ_max) | λ_max² / tr(H²) |")
+    print("| --- | ---: | ---: | ---: | --- | ---: |")
     for s in STEPS:
         r = results[s]
         fam = max(r["families"], key=lambda f: r["families"][f]["lambda_max"])
@@ -94,6 +95,7 @@ def part_a_spectrum():
               f"{fam} ({r['families'][fam]['lambda_max']:.3f}) | {r['lambda_max'] ** 2 / trh2:.3f} |")
     print()
     print("| tokens | " + " | ".join(FAMILIES) + " |")
+    print("| --- | " + " | ".join("---:" for _ in FAMILIES) + " |")
     for s in STEPS:
         print(f"| {tokens_m(s):.1f}M | " + " | ".join(f"{results[s]['families'][f]['lambda_max']:.3f}" for f in FAMILIES) + " |")
     print()
@@ -129,7 +131,8 @@ def part_a_density():
     axes[0].set_ylabel("spectral density (Lanczos quadrature)")
     fig.savefig(OUTPUT_DIR / "p4a_density.png", dpi=150)
     plt.close(fig)
-    print("| tokens | λ_min | λ_max | mass at λ < −0.01 | mass at |λ| ≤ 0.01 | 1−10⁻⁴ quantile | 1−10⁻⁶ quantile | top-3 eigenvalues |")
+    print("| tokens | λ_min | λ_max | mass at λ < −0.01 | mass within ±0.01 of 0 | 99.99% quantile | 99.9999% quantile | top-3 eigenvalues |")
+    print("| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
     for t, lmin, lmax, neg, near0, q4, q6, top in summary:
         print(f"| {t:.0f}M | {lmin:.3f} | {lmax:.3f} | {neg:.2e} | {near0:.4f} | {q4:.3f} | {q6:.3f} | {', '.join(f'{v:.3f}' for v in top)} |")
     print()
@@ -182,6 +185,7 @@ def part_a_blocks():
     plt.close(fig)
 
     print("| tokens | family blocks: share inside | layer blocks: share inside | random family | random layer |")
+    print("| --- | ---: | ---: | ---: | ---: |")
     for s in STEPS:
         r = load_result(f"a-adamw-{s}")
         rf = rl = float("nan")
@@ -307,6 +311,7 @@ def part_c():
     plt.close(fig)
 
     print("| Job | start step | start val | final val | Δ val | mean top-k gradient fraction | final λ_max / threshold |")
+    print("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     for name in ["c-full", "c-top", "c-removed"] + [n for _, group in VARIANTS for n in group if n not in ("c-top", "c-removed")]:
         if not have(name):
             continue
