@@ -209,14 +209,14 @@ def print_tables(cache):
         lam = lambda lo, hi: statistics.median([r["lambda_max"] for r in run["rows"] if r.get("lambda_max") and lo <= r["step"] <= hi])
         print("   median lambda_max 600-750:", lam(600, 750), " 1100-1500:", lam(1100, 1500))
     print()
-    print("| Run | η | B | β₁ | β₂ | WD | median η_t λ_pre (100–190M tokens) | final train loss |")
+    print("| Run | η | B | β₁ | β₂ | WD | median λ_max^pre | median η_t λ_max^pre (100–190M tokens) | final train loss |")
     for name, config in configs_by_name().items():
         if config.num_epochs >= 1 or name not in cache:
             continue
         run = cache[name]
         losses = run["losses"]
         print(f"| {name.split('tok614M-')[-1][:40]} | {config.learning_rate:g} | {config.batch_size} | {config.beta1:g} | "
-              f"{config.beta2:g} | {config.weight_decay:g} | {window_stat(run):.1f} | {losses[-1][1]:.3f} |")
+              f"{config.beta2:g} | {config.weight_decay:g} | {window_stat(run, key='lambda_max_pre'):.0f} | {window_stat(run):.1f} | {losses[-1][1]:.3f} |")
 
 
 def main():

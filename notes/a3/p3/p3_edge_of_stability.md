@@ -40,29 +40,29 @@ Base recipe: η = 3e-3, batch 64, constant LR after warmup, 0.32 epochs (197M to
 
 ![η_t·λ_max^pre for one-at-a-time changes to learning rate, batch size, β₂, β₁, weight decay, clipping and warmup; dashed: 38](p3c_exploration.png)
 
-Median η_t·λ_max^pre over 100–190M tokens (about 60% of the run), one change at a time from the base recipe (η = 3e-3, B = 64, β₁ = 0.9, β₂ = 0.95, λ = 0.1):
+Median λ_max^pre and η·λ_max^pre over 100–190M tokens (about 60% of the run), one change at a time from the base recipe (η = 3e-3, B = 64, β₁ = 0.9, β₂ = 0.95, λ = 0.1). λ_max^pre is the top eigenvalue of D^(-1/2) H D^(-1/2); it is in the thousands because the preconditioner divides by a small √v̂, so it is only meaningful relative to 1/η:
 
-| Change | Value | η·λ_max^pre | Final train loss |
-| --- | --- | ---: | ---: |
-| Base | | 22.1 | 3.235 |
-| Learning rate | 1e-3 | 19.2 | 3.246 |
-| | 1.5e-3 | 20.2 | 3.231 |
-| | 6e-3 | 26.8 | 3.305 |
-| | 1e-2 | 29.5 | 3.378 |
-| Batch size | 16 | 8.9 | 3.281 |
-| | 32 | 13.4 | 3.295 |
-| | 128 | 35.1 | 3.201 |
-| | 256 | 70.3 | 3.329 |
-| β₂ | 0.9 | 22.2 | 3.240 |
-| | 0.99 | 21.6 | 3.238 |
-| | 0.999 | 22.4 | 3.255 |
-| β₁ | 0 | 13.9 | 3.405 |
-| | 0.8 | 19.2 | 3.246 |
-| | 0.95 | 26.7 | 3.255 |
-| Weight decay | 0 | 20.3 | 3.200 |
-| | 1.0 | 39.4 | 3.507 |
-| Gradient clipping | off | 29.8 | 3.251 |
-| Warmup | 10% (vs 3.125%) | 22.3 | 3.241 |
+| Change | Value | λ_max^pre | η·λ_max^pre | Final train loss |
+| --- | --- | ---: | ---: | ---: |
+| Base |  | 7,382 | 22.1 | 3.235 |
+| Learning rate | 1e-3 | 19,160 | 19.2 | 3.246 |
+|  | 1.5e-3 | 13,462 | 20.2 | 3.231 |
+|  | 6e-3 | 4,460 | 26.8 | 3.305 |
+|  | 1e-2 | 2,946 | 29.5 | 3.378 |
+| Batch size | 16 | 2,972 | 8.9 | 3.281 |
+|  | 32 | 4,454 | 13.4 | 3.295 |
+|  | 128 | 11,704 | 35.1 | 3.201 |
+|  | 256 | 23,449 | 70.3 | 3.329 |
+| β₂ | 0.9 | 7,414 | 22.2 | 3.240 |
+|  | 0.99 | 7,193 | 21.6 | 3.238 |
+|  | 0.999 | 7,474 | 22.4 | 3.255 |
+| β₁ | 0 | 4,645 | 13.9 | 3.405 |
+|  | 0.8 | 6,387 | 19.2 | 3.246 |
+|  | 0.95 | 8,910 | 26.7 | 3.255 |
+| Weight decay | 0 | 6,773 | 20.3 | 3.200 |
+|  | 1.0 | 13,129 | 39.4 | 3.507 |
+| Gradient clipping | off | 9,935 | 29.8 | 3.251 |
+| Warmup | 10% (vs 3.125%) | 7,430 | 22.3 | 3.241 |
 
 - **Batch size matters most, and in the direction the noise picture predicts.** η·λ_max^pre grows from 8.9 at B = 16 to 70 at B = 256 (about B^0.75), so larger batches sit at or above 38 and small batches well below it. Smaller batches add gradient noise that keeps the model away from the edge; large batches approach the full-batch behaviour (and the early transient of 100+ for B = 256 and 16 shows how noisy the measurement is).
 - **Learning rate has a weak, monotone effect.** A 10× larger LR raises η·λ_max^pre only 1.5× (19 to 29.5): sharpness falls as η rises (λ_max^pre scales roughly like η^-0.8), so the product moves little. The quantity is closer to constant than λ_max itself, which supports η·λ_max as the natural variable.
